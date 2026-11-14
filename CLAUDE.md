@@ -11,6 +11,7 @@ It is hosted on **GitHub Pages** from the `main` branch root. There is no server
 
 ## Hard rules
 1. **Stay inside the official scope.** The midterm part covers HTML + CSS + JS up to events and is finished. The final part covers the chapters listed in `PLAN-FINAL.md`. Do not add topics outside the course spec. If something is uncertain, label it "Bonus: may not be in the exam".
+   - The split between exams can change each semester. Once step 0b is done, `js/tracks.js` is the **only** place that decides which modules belong to the Midterm, the Final or the Full course. Never hard-code exam scope anywhere else.
 2. **Every model answer must be run and must pass its own checks before you commit.** Never write a check by reasoning only; run it.
 3. **Never commit course material.** Slides, lecture notes and past exam papers are copyrighted.
    - They live in the separate **private** repo `itcs333-materials`, or in `private/`, which is git-ignored.

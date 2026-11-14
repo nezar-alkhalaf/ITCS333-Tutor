@@ -98,6 +98,47 @@ Spike this first (step 1). Pick the option that meets all of the following:
    - A per-lesson switch that shows an extra `simpler` field (short, everyday analogies, the lecture-notes style).
    - Start with the 8 lessons in `content3.js`; then add it to the other 20.
    - It must be optional, with the default unchanged.
+0b. **Study track selector: Midterm / Final / Full course.** Build this before adding any new module, because every later step depends on it.
+   - **Why:** each semester the instructor may move topics between the midterm and the final. A student may also just want to study the whole course with no exam in mind. So the exam scope must be **data, not code**.
+   - **New file `js/tracks.js`** (loaded right after `i18n.js`). It is the single place that says what belongs to each exam. Changing the scope next semester means editing only this file.
+     ```js
+     const TRACKS = {
+       semester: '2026-27 Sem 1',
+       list: [
+         { id: 'mid',   label: {en:'Midterm', ar:'الميد'},
+           examDate: '2026-11-12T15:00+03:00',
+           scopeNote: {en:'Instructor: HTML + CSS + JS (till events)', ar:'...'},
+           modules: ['html','forms','css','layout','js','dom','events'],
+           exams: ['midterm'] },
+         { id: 'final', label: {en:'Final', ar:'الفاينل'},
+           examDate: '2026-12-27T08:30+03:00',
+           scopeNote: {...},
+           modules: ['async','php','db','state','security','web'],
+           exams: ['final'] },
+         { id: 'all',   label: {en:'Full course', ar:'المادة كاملة'},
+           modules: '*', exams: '*' }
+       ]
+     };
+     ```
+     - Scope is defined **per module**. If a split ever falls inside a module, a track may also list `lessons: [...]` to add or exclude single lessons.
+     - If the final turns out to be cumulative, the `final` track simply lists the midterm modules as well.
+   - **Every lesson and question gets a `chapter` tag** (for example `'Ch 9'`), so tracks could also be defined by chapter later.
+   - **UI:**
+     - A segmented switch **Midterm | Final | Full course** in the top bar, next to the language switch. On phones it moves into the menu.
+     - The choice is saved in localStorage as `wdl:track`.
+     - The default is the track whose exam date is the nearest in the future; if none, **Full course**.
+     - The "Full course" track shows no countdown and no exam framing: just all lessons in book chapter order.
+   - **What the track filters:**
+     - The Learn list and the lesson prev/next navigation.
+     - The question bank and random questions.
+     - The challenges list.
+     - The mock exam list.
+     - The home countdown, the hero chip and the scope note.
+     - Progress bars, so progress is shown per track.
+   - **Saved progress** is stored per lesson, not per track, so switching tracks never loses anything.
+   - **Out-of-track lessons stay reachable** by direct link. They show a small banner: "Not in the Midterm scope: part of the Final".
+   - **Guide page:** add a short "How to change the scope next semester" section (edit `js/tracks.js` only).
+   - **Checks:** with each track selected, every route opens in both languages with no errors, and the counts of lessons, questions and challenges match `tracks.js`.
 1. **PHP runner spike** (section 2). Make a hidden test page `#php-lab`, and record the decision in this file.
 2. **Module 08, Ch 10 (APIs & async).**
    - Lessons: callbacks to Promises, `fetch` + `.then`, `async/await` + `try/catch`, JSON APIs, rendering fetched data into a table.
@@ -136,9 +177,8 @@ Spike this first (step 1). Pick the option that meets all of the following:
    - Same engine as the mock midterm (`exam.js`), with new parts: PHP arrays/regex, PDO prepared statement, session/cookie output, and short answers. Several scenarios each.
    - Marking is line by line with the same point style (1 pt per required line).
    - Run every model answer and confirm full marks.
-10. **Home and navigation.**
-    - Split Learn into "Midterm part" and "Final part" with a progress bar each.
-    - Move the countdown to the final.
+10. **Home and navigation** (most of this is done in step 0b).
+    - Final polish of the home page for each track.
     - Update the footer chapters.
 
 ## 4. Definition of done (each step)
