@@ -11,7 +11,7 @@ It is hosted on **GitHub Pages** from the `main` branch root. There is no server
 
 ## Hard rules
 1. **Stay inside the official scope.** The midterm part covers HTML + CSS + JS up to events and is finished. The final part covers the chapters listed in `PLAN-FINAL.md`. Do not add topics outside the course spec. If something is uncertain, label it "Bonus: may not be in the exam".
-   - The split between exams can change each semester. Once step 0b is done, `js/tracks.js` is the **only** place that decides which modules belong to the Midterm, the Final or the Full course. Never hard-code exam scope anywhere else.
+   - The split between exams can change each semester. `js/tracks.js` is the **only** place that decides which modules belong to the Midterm, the Final or the Full course. Never hard-code exam scope anywhere else.
 2. **Every model answer must be run and must pass its own checks before you commit.** Never write a check by reasoning only; run it.
 3. **Never commit course material.** Slides, lecture notes and past exam papers are copyrighted.
    - They live in the separate **private** repo `itcs333-materials`, or in `private/`, which is git-ignored.
@@ -32,10 +32,11 @@ It is hosted on **GitHub Pages** from the `main` branch root. There is no server
 ## Architecture (vanilla JS)
 | File | Role |
 |---|---|
-| `index.html` | Shell. Script order matters: util, i18n, content*, content-ar*, questions*, exam, app |
+| `index.html` | Shell. Script order matters: util, i18n, tracks, content*, content-ar*, questions*, exam, app |
 | `css/app.css` | Design tokens (cobalt accent `#2346D8`), light/dark, RTL, lesson grid with resizable sidebar |
 | `js/util.js` | `U.md` (paragraphs, `- ` / `1. ` lists, `[[inline code]]`, `**bold**`), `U.hl` highlight, `U.codeBlock`, `U.editor` (textarea over highlighted pre), `U.run` (sandboxed iframe via srcdoc), `U.hiddenFrame`, `U.store` (localStorage) |
 | `js/i18n.js` | UI strings `S.en` / `S.ar`, `I18N.t()`, `I18N.lesson(L)` merges `LESSONS_AR`, `I18N.question(q,i)` merges `QUESTIONS_AR` |
+| `js/tracks.js` | `TRACKS`: the Midterm / Final / Full course scope (modules, exam dates, mock exams) and its helpers. `app.js` reads the scope only through `scope()` and `TRACKS.has*` |
 | `js/content.js`, `content2.js` | `MODULES`, `STEP_NAMES`, and the first 20 lessons |
 | `js/content3.js` | 8 lessons from the lecture notes, spliced into `LESSONS` after given ids |
 | `js/content-ar*.js` | `LESSONS_AR[id]` |

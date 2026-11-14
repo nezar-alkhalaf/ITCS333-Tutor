@@ -5,10 +5,27 @@
   const md = U.md, esc = U.esc;
   const h = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const moduleOf = id => MODULES.find(m => m.id === id);
-  const lessonsOf = mid => LESSONS.filter(l => l.module === mid);
-  const LANG_COLOR = { html: 'var(--c-html)', css: 'var(--c-css)', js: 'var(--c-js)', php: 'var(--c-php)' };
+  const LANG_COLOR = { html: 'var(--c-html)', css: 'var(--c-css)', js: 'var(--c-js)', php: 'var(--c-php)', db: 'var(--c-db)', sec: 'var(--c-sec)', web: 'var(--c-web)' };
   const LANG_LABEL = l => l === 'js' ? 'JavaScript' : l.toUpperCase();
-  QUESTIONS.forEach((q, i) => q.id = 'q' + i);
+  /* chapter tags: taken from the module unless a lesson or question sets its own */
+  LESSONS.forEach(l => { if (!l.chapter) l.chapter = (moduleOf(l.module) || {}).ch; });
+  QUESTIONS.forEach((q, i) => { q.id = 'q' + i; if (!q.chapter) q.chapter = (moduleOf(q.m) || {}).ch; });
+
+  /* ---------- study track (the scope itself lives in js/tracks.js) ---------- */
+  const ALL = MODULES.flatMap(m => LESSONS.filter(l => l.module === m.id));   /* every lesson, in module order */
+  /* the chosen track; with no choice saved, the default track is skipped while it still has no lessons */
+  const track = () => {
+    const T = TRACKS.current();
+    return U.store.get('track', null) || ALL.some(l => TRACKS.hasLesson(T, l)) ? T : TRACKS.list.find(TRACKS.isFull) || T;
+  };
+  /* scope(): the lessons and modules of the current track. scope(true): the full course. */
+  function scope(full) {
+    const T = track(), lessons = full ? ALL : ALL.filter(l => TRACKS.hasLesson(T, l));
+    return { T, lessons, of: mid => lessons.filter(l => l.module === mid), modules: MODULES.filter(m => lessons.some(l => l.module === m.id)) };
+  }
+  const lessonsOf = mid => scope().of(mid);
+  const trackName = T => TRACKS.text(T.label);
+  const PUZZLE_MODULE = 'css';   /* the specificity puzzles belong to this module */
 
   /* ---------- progress ---------- */
   const P = {
@@ -33,7 +50,30 @@
   const paintChrome = () => {
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
     document.querySelectorAll('[data-lang]').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === I18N.lang()));
+    const T = track();
+    $('#brandSub').textContent = trackName(T) + ' · ' + TRACKS.semester;
+    $('#foot').textContent = t('footer', TRACKS.text(T.chapters));
+    const seg = $('#trackSeg');
+    seg.setAttribute('aria-label', t('trackLabel'));
+    seg.innerHTML = TRACKS.list.map(x => `<button type="button" data-track="${x.id}" aria-pressed="${x.id === T.id}">${esc(trackName(x))}</button>`).join('');
   };
+  const setTrack = id => { if (id === track().id) return; TRACKS.pick(id); paintChrome(); route(); };
+  $('#trackSeg').addEventListener('click', e => { const b = e.target.closest('[data-track]'); if (b) setTrack(b.dataset.track); });
+  const menuBtn = $('#menuBtn'), topbar = $('.topbar');
+  const setMenu = on => { topbar.classList.toggle('open', on); menuBtn.setAttribute('aria-expanded', String(on)); };
+  menuBtn.addEventListener('click', () => setMenu(!topbar.classList.contains('open')));
+  /* one line about the track's exam: a countdown before it, a plain note after it, nothing for a track with no exam */
+  function examLine(T) {
+    const ts = TRACKS.date(T); if (!ts) return '';
+    const when = new Date(ts).toLocaleString(I18N.isAr() ? 'ar-BH-u-nu-latn' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bahrain' });
+    if (ts < Date.now()) return `<div class="countdown past"><span class="cd-text muted small">${t('examWas', esc(trackName(T)), when)}</span></div>`;
+    const days = Math.ceil((ts - Date.now()) / 86400000);
+    return `<div class="countdown"><span class="cd-num">${days}</span><span class="cd-text"><strong>${t('daysTo', days, esc(trackName(T)))}</strong><br><span class="muted small">${when}</span></span></div>`;
+  }
+  function trackBar(S) {
+    const d = P.done(), n = S.lessons.filter(l => d[l.id]).length, tot = S.lessons.length;
+    return `<div class="track-progress"><span class="chip">${esc(trackName(S.T))}</span><div class="bar" aria-hidden="true"><span style="width:${tot ? Math.round(n / tot * 100) : 0}%"></span></div><span class="small muted">${t('lessonsDone', n, tot)}</span></div>`;
+  }
   paintChrome();
   document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => {
     if (b.dataset.lang === I18N.lang()) return;
@@ -310,72 +350,89 @@
 
   /* ---------- VIEWS ---------- */
   function viewHome() {
-    const last = U.store.get('last', null), lastL0 = LESSONS.find(l => l.id === last), lastL = lastL0 && I18N.lesson(lastL0);
-    const totalDone = Object.keys(P.done()).filter(k => LESSONS.some(l => l.id === k)).length;
-    app.innerHTML = `
-    <section class="hero">
-      <div>
-        <span class="chip">${t('heroChip')}</span>
-        <h1 style="margin-top:14px">${t('heroTitle')}</h1>
-        <p class="lead">${t('heroLead')}</p>
-        <div class="row">
-          <a class="btn primary" href="#${lastL ? 'lesson-' + lastL.id : 'lesson-' + LESSONS[0].id}">${lastL ? t('continue') + esc(lastL.title) : t('start1')}</a>
-          <a class="btn" href="#exam">${t('takeMock')}</a>
-        </div>
-        <p class="small muted" style="margin-top:12px">${t('lessonsDone', totalDone, LESSONS.length)}</p>
-      </div>
-      <div class="hero-code">${U.hl('js', `gradeForm.addEventListener('submit', function (event) {
+    const S = scope(), T = S.T, ls = S.lessons;
+    const last = U.store.get('last', null), lastL0 = ls.find(l => l.id === last), lastL = lastL0 && I18N.lesson(lastL0);
+    const hasExam = EXAMS.some(e => TRACKS.hasExam(T, e.id));
+    const hasQ = QUESTIONS.filter(q => TRACKS.hasModule(T, q.m)).length;
+    const server = S.modules.some(m => m.lang === 'php') && !S.modules.some(m => m.lang === 'html');
+    const sample = server ? U.hl('php', `<?php
+$stmt = $db->prepare("SELECT * FROM users WHERE email = :email");
+$stmt->bindParam(':email', $_POST['email']);
+$stmt->execute();
+$user = $stmt->fetch();
+?>
+<div class="welcome">Welcome <?= $user['username'] ?></div>`) : U.hl('js', `gradeForm.addEventListener('submit', function (event) {
   event.preventDefault();
   const newRow = createGradeRow();
   gradeTbody.appendChild(newRow);
-});`)}</div>
+});`);
+    app.innerHTML = `
+    <section class="hero">
+      <div>
+        <span class="chip">ITCS333 · ${esc(trackName(T))}${TRACKS.isFull(T) ? '' : ': ' + esc(TRACKS.text(T.scopeNote))}</span>
+        <h1 style="margin-top:14px">${t('heroTitle')}</h1>
+        <p class="lead">${ls.length ? t('heroLead', ls.length, esc(TRACKS.text(T.scopeNote)), hasExam) : t('trackEmpty')}</p>
+        ${examLine(T)}
+        <div class="row">
+          ${ls.length ? `<a class="btn primary" href="#lesson-${lastL ? lastL.id : ls[0].id}">${lastL ? t('continue') + esc(lastL.title) : t('start1')}</a>` : ''}
+          ${hasExam ? `<a class="btn" href="#exam">${t('takeMock')}</a>` : ''}
+        </div>
+        ${ls.length ? trackBar(S) : ''}
+      </div>
+      <div class="hero-code">${sample}</div>
     </section>
     <div class="quick">
-      <a href="#learn"><div class="card"><h3>${t('qLearnT')}</h3><p class="muted small">${t('qLearnD')}</p></div></a>
-      <a href="#practice"><div class="card"><h3>${t('qPracT')}</h3><p class="muted small">${t('qPracD', QUESTIONS.length)}</p></div></a>
-      <a href="#practice-puzzles"><div class="card"><h3>${t('qPuzT')}</h3><p class="muted small">${t('qPuzD')}</p></div></a>
-      <a href="#practice-exam"><div class="card"><h3>${t('qRandT')}</h3><p class="muted small">${t('qRandD')}</p></div></a>
+      <a href="#learn"><div class="card"><h3>${t('qLearnT')}</h3><p class="muted small">${t('qLearnD', S.modules.length, ls.length)}</p></div></a>
+      <a href="#practice"><div class="card"><h3>${t('qPracT')}</h3><p class="muted small">${t('qPracD', hasQ)}</p></div></a>
+      ${TRACKS.hasModule(T, PUZZLE_MODULE) ? `<a href="#practice-puzzles"><div class="card"><h3>${t('qPuzT')}</h3><p class="muted small">${t('qPuzD')}</p></div></a>` : ''}
+      ${hasExam ? `<a href="#practice-exam"><div class="card"><h3>${t('qRandT')}</h3><p class="muted small">${t('qRandD')}</p></div></a>` : ''}
     </div>
     <div class="section-title"><h2>${t('thePath')}</h2><a href="#guide" class="small">${t('howStudy')}</a></div>
-    <div class="path">${MODULES.map(m => `
-      <a class="module-card" href="#lesson-${lessonsOf(m.id)[0].id}" style="--mc:${LANG_COLOR[m.lang]}">
+    <div class="path">${S.modules.map(m => `
+      <a class="module-card" href="#lesson-${S.of(m.id)[0].id}" style="--mc:${LANG_COLOR[m.lang]}">
         <span class="num">${m.num}</span>
-        <span class="row"><span class="chip ${m.lang}">${m.ch}</span><span class="small muted">${t('nLessons', lessonsOf(m.id).length)}</span></span>
+        <span class="row"><span class="chip ${m.lang}">${m.ch}</span><span class="small muted">${t('nLessons', S.of(m.id).length)}</span></span>
         <h3>${esc(I18N.modTitle(m))}</h3><p class="small muted" style="margin:0">${esc(I18N.modBlurb(m))}</p>
         <div class="bar" aria-label="progress"><span style="width:${Math.round(moduleProgress(m.id) * 100)}%"></span></div>
       </a>`).join('')}</div>`;
   }
 
   function viewLearn() {
-    const d = P.done(), c = P.chal();
-    app.innerHTML = `<h1>${t('lessonsH')}</h1><p class="muted">${t('lessonsLead')}</p>` +
-      MODULES.map(m => `<div class="module-block"><div class="module-head"><span class="chip ${m.lang}">${m.ch}</span><h2 style="margin:0">${m.num} · ${esc(I18N.modTitle(m))}</h2></div>
-      <div class="lesson-list">${lessonsOf(m.id).map((l, i) => `<a class="lesson-link" href="#lesson-${l.id}"><span class="t">${i + 1}. ${esc(I18N.lesson(l).title)}</span><span class="row">${d[l.id] ? '<span class="chip done">' + t('quizDone') + '</span>' : ''}${c[l.id] ? '<span class="chip done">' + t('chalDone') + '</span>' : ''}</span></a>`).join('')}</div></div>`).join('');
+    const S = scope(), d = P.done(), c = P.chal();
+    app.innerHTML = `<h1>${t('lessonsH')}</h1><p class="muted">${t('lessonsLead')}</p>${trackBar(S)}` + (S.lessons.length ? '' : `<div class="note">${t('trackEmpty')}</div>`) +
+      S.modules.map(m => `<div class="module-block"><div class="module-head"><span class="chip ${m.lang}">${m.ch}</span><h2 style="margin:0">${m.num} · ${esc(I18N.modTitle(m))}</h2></div>
+      <div class="lesson-list">${S.of(m.id).map((l, i) => `<a class="lesson-link" href="#lesson-${l.id}"><span class="t">${i + 1}. ${esc(I18N.lesson(l).title)}</span><span class="row">${d[l.id] ? '<span class="chip done">' + t('quizDone') + '</span>' : ''}${c[l.id] ? '<span class="chip done">' + t('chalDone') + '</span>' : ''}</span></a>`).join('')}</div></div>`).join('');
   }
 
   function viewLesson(id) {
     const L0 = LESSONS.find(l => l.id === id);
     if (!L0) return viewLearn();
     const L = I18N.lesson(L0);
-    const m = moduleOf(L.module), idx = LESSONS.indexOf(L0);
+    /* a lesson outside the current track stays reachable: it is shown inside the full course, with a banner */
+    const T = track(), outside = !TRACKS.hasLesson(T, L0), owner = outside ? TRACKS.owner(L0) : null;
+    const S = scope(outside), list = S.lessons;
+    const hasExam = EXAMS.some(e => TRACKS.hasExam(T, e.id));
+    const endHref = hasExam ? 'exam' : 'learn';
+    const m = moduleOf(L.module), idx = list.indexOf(L0);
     let step = Math.min(P.step(id), 7);
     const seen = new Set(U.store.get('seen:' + id, [0]));
-    const prevL = LESSONS[idx - 1], nextL = LESSONS[idx + 1];
+    const prevL = list[idx - 1], nextL = list[idx + 1];
     const doneMap = P.done(), chalMap = P.chal();
-    const courseMap = MODULES.map(mm => {
-      const ls = lessonsOf(mm.id), open = mm.id === m.id;
+    const courseMap = S.modules.map(mm => {
+      const ls = S.of(mm.id), open = mm.id === m.id;
       return `<details class="cm-mod" ${open ? 'open' : ''} style="--mc:${LANG_COLOR[mm.lang]}"><summary><span class="cm-num">${mm.num}</span><span>${esc(I18N.modTitle(mm))}</span><span class="cm-ch">${mm.ch}</span></summary>
         <ol class="cm-list">${ls.map(l => `<li><a href="#lesson-${l.id}" ${l.id === id ? 'aria-current="page"' : ''}><span class="cm-dot ${doneMap[l.id] && chalMap[l.id] ? 'full' : doneMap[l.id] || chalMap[l.id] ? 'half' : ''}" aria-hidden="true"></span>${esc(I18N.lesson(l).title)}</a></li>`).join('')}</ol></details>`;
     }).join('');
     app.innerHTML = `<div class="lesson-top">
-        <div class="crumbs"><a href="#learn">${t('lessonsH')}</a> / ${esc(m.num + ' ' + I18N.modTitle(m))} <span class="muted">· ${t('lessonOf', idx + 1, LESSONS.length)}</span></div>
+        <div class="crumbs"><a href="#learn">${t('lessonsH')}</a> / ${esc(m.num + ' ' + I18N.modTitle(m))} <span class="muted">· ${t('lessonOf', idx + 1, list.length)}</span></div>
         <div class="row lesson-jump">
           ${prevL ? `<a class="btn small" href="#lesson-${prevL.id}" title="${esc(I18N.lesson(prevL).title)}">${t('prevLesson')}</a>` : ''}
           <label for="jump" class="sr-only">${t('jump')}</label>
-          <select id="jump" aria-label="${t('jump')}">${MODULES.map(mm => `<optgroup label="${mm.num} · ${esc(I18N.modTitle(mm))} (${mm.ch})">${lessonsOf(mm.id).map(l => `<option value="${l.id}" ${l.id === id ? 'selected' : ''}>${LESSONS.indexOf(l) + 1}. ${esc(I18N.lesson(l).title)}</option>`).join('')}</optgroup>`).join('')}</select>
+          <select id="jump" aria-label="${t('jump')}">${S.modules.map(mm => `<optgroup label="${mm.num} · ${esc(I18N.modTitle(mm))} (${mm.ch})">${S.of(mm.id).map(l => `<option value="${l.id}" ${l.id === id ? 'selected' : ''}>${list.indexOf(l) + 1}. ${esc(I18N.lesson(l).title)}</option>`).join('')}</optgroup>`).join('')}</select>
           ${nextL ? `<a class="btn small" href="#lesson-${nextL.id}" title="${esc(I18N.lesson(nextL).title)}">${t('nextLessonBtn')}</a>` : ''}
         </div>
       </div>
+      ${outside ? `<div class="note scope-note">${t('notInTrack', esc(trackName(T)), owner ? esc(trackName(owner)) : '')}${owner ? ` <button class="btn small" type="button" id="scopeSwitch">${t('switchTo', esc(trackName(owner)))}</button>` : ''}</div>` : ''}
       <h1 style="font-size:clamp(1.6rem,3.4vw,2.4rem)">${esc(L.title)}</h1>
       <div class="lesson-wrap ${U.store.get('sideHidden', false) ? 'side-hidden' : ''}" style="--side-w:${U.store.get('sideW', 228)}px"><button class="side-rail" id="sideOpen" type="button" title="${t('showMenu')}" aria-label="${t('showMenu')}" aria-controls="lessonSide"><span aria-hidden="true">☰</span><span class="rail-text">${t('menu')}</span></button><aside class="lesson-side" id="lessonSide"><div class="side-head"><span>☰ ${t('menu')}</span><button class="btn small" id="sideClose" type="button" title="${t('hideMenu')}" aria-label="${t('hideMenu')}" aria-controls="lessonSide">${I18N.isAr() ? '»' : '«'} ${t('hideShort')}</button></div><div class="side-resize" id="sideResize" role="separator" aria-orientation="vertical" aria-label="${t('resizeMenu')}" tabindex="0" title="${t('resizeMenu')}"></div><div class="side-label">${t('thisLesson')}</div><ol class="steps">${STEP_NAMES.map((n, i) => `<li><button type="button" data-step="${i}">${I18N.stepName(i)}</button></li>`).join('')}</ol>
         <div class="side-label" style="margin-top:18px">${t('allChapters')}</div><nav class="course-map" aria-label="${t('allChapters')}">${courseMap}</nav>
@@ -410,13 +467,14 @@
         const qh = document.createElement('div'); body.appendChild(qh);
         quiz(qh, L.recall, { score: true, number: true, onDone: () => P.markDone(id) });
         if (L.challenge) { add('<h3 style="margin-top:24px">' + t('codingChallenge') + '</h3>'); const ch = document.createElement('div'); body.appendChild(ch); challenge(ch, L.challenge, id); }
-        const next = LESSONS[idx + 1];
-        add(`<div class="done-banner"><span>${next ? t('nextLessonBanner', esc(I18N.lesson(next).title)) : t('lastLesson')}</span><a class="btn" href="#${next ? 'lesson-' + next.id : 'exam'}">${next ? t('goNext') : t('startMock')}</a></div>`);
+        const next = list[idx + 1];
+        add(`<div class="done-banner"><span>${next ? t('nextLessonBanner', esc(I18N.lesson(next).title)) : t(hasExam ? 'lastLesson' : 'lastLessonNoExam')}</span><a class="btn" href="#${next ? 'lesson-' + next.id : endHref}">${next ? t('goNext') : t(hasExam ? 'startMock' : 'backToLessons')}</a></div>`);
       }
       $('[data-go="-1"]').disabled = step === 0 && idx === 0;
-      $('[data-go="1"]').textContent = step === 7 ? (LESSONS[idx + 1] ? t('nextLessonBtn') : t('mockArrow')) : t('next');
+      $('[data-go="1"]').textContent = step === 7 ? (list[idx + 1] ? t('nextLessonBtn') : t(hasExam ? 'mockArrow' : 'backToLessons')) : t('next');
     };
     $('#jump').addEventListener('change', e => { location.hash = 'lesson-' + e.target.value; });
+    if ($('#scopeSwitch')) $('#scopeSwitch').addEventListener('click', () => setTrack(owner.id));
     const wrapEl = $('.lesson-wrap');
     const setHidden = hid => { wrapEl.classList.toggle('side-hidden', hid); U.store.set('sideHidden', hid); $('#sideOpen').setAttribute('aria-expanded', String(!hid)); $('#sideClose').setAttribute('aria-expanded', String(!hid)); };
     $('#sideClose').addEventListener('click', () => { setHidden(true); $('#sideOpen').focus(); });
@@ -446,14 +504,14 @@
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       let dir = e.key === 'ArrowRight' ? 1 : -1;
       if (I18N.isAr()) dir = -dir;
-      if (e.shiftKey) { const L2 = LESSONS[idx + dir]; if (L2) { e.preventDefault(); location.hash = 'lesson-' + L2.id; } return; }
+      if (e.shiftKey) { const L2 = list[idx + dir]; if (L2) { e.preventDefault(); location.hash = 'lesson-' + L2.id; } return; }
       const btn = app.querySelector('[data-go="' + dir + '"]'); if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
     };
     app.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => { step = +b.dataset.step; render(); }));
     app.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
       const g = +b.dataset.go;
-      if (g > 0 && step === 7) { location.hash = LESSONS[idx + 1] ? 'lesson-' + LESSONS[idx + 1].id : 'exam'; return; }
-      if (g < 0 && step === 0) { if (idx > 0) location.hash = 'lesson-' + LESSONS[idx - 1].id; return; }
+      if (g > 0 && step === 7) { location.hash = list[idx + 1] ? 'lesson-' + list[idx + 1].id : endHref; return; }
+      if (g < 0 && step === 0) { if (idx > 0) location.hash = 'lesson-' + list[idx - 1].id; return; }
       step += g; render(); window.scrollTo({ top: 0 });
     }));
     render();
@@ -461,26 +519,29 @@
 
   /* ----- Practice ----- */
   const PTABS = [['practice', 'ptQuiz'], ['practice-puzzles', 'ptPuz'], ['practice-exam', 'ptRand'], ['practice-challenges', 'ptChal'], ['practice-playground', 'ptPlay']];
+  /* a practice tab is offered when the current track has what it needs (it still opens by direct link) */
+  const PTAB_OK = { 'practice-puzzles': T => TRACKS.hasModule(T, PUZZLE_MODULE), 'practice-exam': T => EXAMS.some(e => e.random && TRACKS.hasExam(T, e.id)) };
   function practiceShell(active) {
-    app.innerHTML = `<h1>${t('practiceH')}</h1><div class="toolbar"><div class="seg" role="group" aria-label="Practice type">${PTABS.map(([k, n]) => `<button type="button" aria-pressed="${k === active}" data-k="${k}">${t(n)}</button>`).join('')}</div></div><div id="pbody"></div>`;
+    const T = track(), tabs = PTABS.filter(([k]) => k === active || !PTAB_OK[k] || PTAB_OK[k](T));
+    app.innerHTML = `<h1>${t('practiceH')}</h1><div class="toolbar"><div class="seg" role="group" aria-label="Practice type">${tabs.map(([k, n]) => `<button type="button" aria-pressed="${k === active}" data-k="${k}">${t(n)}</button>`).join('')}</div></div><div id="pbody"></div>`;
     app.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => location.hash = b.dataset.k));
     return $('#pbody');
   }
   function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
   function viewPractice() {
-    const host = practiceShell('practice');
+    const host = practiceShell('practice'), T = track();
     const stats = U.store.get('qstats', {});
-    host.innerHTML = `<div class="toolbar"><label for="pm" class="small muted">${t('topic')}</label><select id="pm"><option value="all">${t('allTopics')}</option>${MODULES.map(m => `<option value="${m.id}">${m.num} · ${esc(I18N.modTitle(m))}</option>`).join('')}</select>
+    host.innerHTML = `<div class="toolbar"><label for="pm" class="small muted">${t('topic')}</label><select id="pm"><option value="all">${t('allTopics')}</option>${MODULES.filter(m => TRACKS.hasModule(T, m.id) && QUESTIONS.some(q => q.m === m.id)).map(m => `<option value="${m.id}">${m.num} · ${esc(I18N.modTitle(m))}</option>`).join('')}</select>
       <label for="pn" class="small muted">${t('questions')}</label><select id="pn"><option>10</option><option>20</option><option value="999">${t('all')}</option></select>
       <label class="switch"><input type="checkbox" id="pw"> ${t('onlyWrong')}</label>
       <button class="btn primary" id="pgo" type="button">${t('newSet')}</button></div><div id="qhost"></div>`;
     const go = () => {
       const mod = $('#pm').value, n = +$('#pn').value, wrongOnly = $('#pw').checked;
-      let pool = QUESTIONS.map((q, i) => I18N.question(q, i)).filter(q => mod === 'all' || q.m === mod);
+      let pool = QUESTIONS.map((q, i) => I18N.question(q, i)).filter(q => TRACKS.hasModule(T, q.m) && (mod === 'all' || q.m === mod));
       if (wrongOnly) pool = pool.filter(q => stats[q.id] && stats[q.id].w > 0);
       const qh = $('#qhost'); qh.innerHTML = '';
-      if (!pool.length) { qh.innerHTML = '<div class="note">' + t('noQs') + '</div>'; return; }
+      if (!pool.length) { qh.innerHTML = '<div class="note">' + t(wrongOnly ? 'noQs' : 'noQsTrack') + '</div>'; return; }
       const set = shuffle(pool).slice(0, n).map(q => { const order = shuffle(q.o.map((o, i) => i)); return Object.assign({}, q, { o: order.map(i => q.o[i]), a: order.indexOf(q.a) }); });
       quiz(qh, set, { score: true, number: true, onDone: (r, tt) => qh.appendChild(h(`<div class="done-banner"><span>${t('scored', r, tt)}</span><button class="btn" type="button">${t('another')}</button></div>`)).querySelector('button').addEventListener('click', go) });
     };
@@ -567,6 +628,11 @@
 
   function viewRandomQ() {
     const host = practiceShell('practice-exam');
+    const kinds = EXAMS.filter(e => e.random && TRACKS.hasExam(track(), e.id));
+    if (!kinds.length) { host.innerHTML = '<div class="note">' + t('noExam') + '</div>'; return; }
+    kinds[Math.floor(Math.random() * kinds.length)].random(host);
+  }
+  function randomMidterm(host) {
     const sc = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)], part = EXAM.PARTS[Math.floor(Math.random() * 3)];
     host.innerHTML = `<div class="toolbar"><span class="chip">${t('scenario')}: ${esc(sc.name)}</span><span class="chip">${part.title}</span><button class="btn" id="another" type="button">${t('anotherQ')}</button></div>
       <div class="exam-grid">${specPanel(part, sc)}<div><div id="ed"></div><div class="row"><button class="btn primary" id="grade" type="button">${t('mark')}</button></div><div id="helphost" style="margin-top:12px"></div><div id="res" style="margin-top:14px"></div></div></div>`;
@@ -605,17 +671,27 @@
   function viewChallenges() {
     const host = practiceShell('practice-challenges');
     const c = P.chal();
-    host.innerHTML = '<p class="muted">' + t('chalLead') + '</p>' + MODULES.map(m => `<h3 style="margin-top:18px">${m.num} · ${esc(I18N.modTitle(m))}</h3><div class="lesson-list">${lessonsOf(m.id).filter(l => l.challenge).map(l => `<a class="lesson-link" href="#lesson-${l.id}" data-l="${l.id}"><span class="t">${esc(I18N.lesson(l).title)}</span>${c[l.id] ? '<span class="chip done">' + t('done') + '</span>' : '<span class="chip">' + t('todo') + '</span>'}</a>`).join('')}</div>`).join('');
+    const S = scope();
+    host.innerHTML = '<p class="muted">' + t('chalLead') + '</p>' + (S.lessons.some(l => l.challenge) ? '' : '<div class="note">' + t('trackEmpty') + '</div>') + S.modules.filter(m => S.of(m.id).some(l => l.challenge)).map(m => `<h3 style="margin-top:18px">${m.num} · ${esc(I18N.modTitle(m))}</h3><div class="lesson-list">${S.of(m.id).filter(l => l.challenge).map(l => `<a class="lesson-link" href="#lesson-${l.id}" data-l="${l.id}"><span class="t">${esc(I18N.lesson(l).title)}</span>${c[l.id] ? '<span class="chip done">' + t('done') + '</span>' : '<span class="chip">' + t('todo') + '</span>'}</a>`).join('')}</div>`).join('');
     host.querySelectorAll('[data-l]').forEach(a => a.addEventListener('click', () => P.step(a.dataset.l, 7)));
   }
 
   /* ----- Mock exam ----- */
   let timerId = null;
+  /* Mock exams. id matches "exams" in js/tracks.js. view(head) draws the start page; random(host) draws one random question. */
+  const EXAMS = [{ id: 'midterm', name: () => t('mockH'), view: viewMidterm, random: randomMidterm }];
   function viewExam() {
     clearInterval(timerId);
+    const list = EXAMS.filter(e => TRACKS.hasExam(track(), e.id));
+    if (!list.length) { app.innerHTML = `<h1>${t('navExam')}</h1><div class="note">${t('noExam')}</div>`; return; }
+    const cur = list.find(e => e.id === U.store.get('examKind', null)) || list[0];
+    cur.view(list.length > 1 ? `<div class="toolbar"><div class="seg" role="group" aria-label="${t('navExam')}">${list.map(e => `<button type="button" data-exam="${e.id}" aria-pressed="${e === cur}">${e.name()}</button>`).join('')}</div></div>` : '');
+    app.querySelectorAll('[data-exam]').forEach(b => b.addEventListener('click', () => { U.store.set('examKind', b.dataset.exam); viewExam(); }));
+  }
+  function viewMidterm(head) {
     const draft = U.store.get('examDraft', null);
     const hist = U.store.get('exams', []);
-    app.innerHTML = `<h1>${t('mockH')}</h1>
+    app.innerHTML = `${head}<h1>${t('mockH')}</h1>
       <p class="muted" style="max-width:70ch">${t('mockLead')}</p>
       <div class="card" style="max-width:720px"><div class="toolbar" style="margin:0">
         <label for="scSel" class="small muted">${t('scenario')}</label><select id="scSel"><option value="random">${t('random')}</option>${SCENARIOS.map(s => `<option value="${s.key}">${esc(s.name)}</option>`).join('')}</select>
@@ -686,9 +762,10 @@
   }
 
   function viewGuide() {
-    if (I18N.isAr()) { app.innerHTML = GUIDE_AR; return; }
+    const T = track(), scopeLine = t('guideScope', esc(trackName(T)), esc(TRACKS.text(T.scopeNote)), esc(TRACKS.text(T.chapters)));
+    if (I18N.isAr()) { app.innerHTML = GUIDE_AR.replace('{{scope}}', scopeLine); return; }
     app.innerHTML = `<h1>How to use this site</h1>
-    <p class="muted">Written for any ITCS333 student. The midterm material is <strong>HTML + CSS + JS (till events)</strong>: chapters 3, 4, 5, 7, 8 and 9 up to events.</p>
+    <p class="muted">Written for any ITCS333 student. ${scopeLine}</p>
     <ol class="guide-steps">
       <li><h3>Go through the lessons in order</h3><p>Each lesson has 8 steps: Big Picture, Simple Explanation, Deeper Understanding (with a live editor), Important Points, Exam Focus, Common Mistakes, Mini Summary and Active Recall. Do not skip the editor: change the code and press Run.</p></li>
       <li><h3>Finish every coding challenge</h3><p>The last step of each lesson has a challenge that the site checks line by line. If you are stuck, write what you can, press Check, and read which lines fail before opening the model answer.</p></li>
@@ -702,7 +779,11 @@
       <li>Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> in an editor to run the code; <kbd>Tab</kbd> indents.</li>
       <li>The English / عربي switch at the top changes the language. In Arabic mode the technical terms and the exam questions stay in English.</li>
       <li>Source: Connolly &amp; Hoar, <em>Fundamentals of Web Development</em>, 3rd ed., and past ITCS333 papers.</li>
-    </ul>`;
+    </ul>
+    <h2 style="margin-top:30px">Midterm, Final or Full course</h2>
+    <p>The switch at the top chooses what you are studying for. It filters the lessons, the questions, the challenges and the mock exams, and it sets the countdown. Your progress is saved per lesson, so switching never loses anything. A lesson outside the chosen track still opens from a direct link, with a note saying which track it belongs to.</p>
+    <h3>How to change the scope next semester</h3>
+    <p>The split between the midterm and the final can change every semester. It is written in one file only: <code>js/tracks.js</code>. For each track, edit <code>modules</code> (which modules are in), <code>examDate</code>, <code>scopeNote</code> and <code>chapters</code>. To move a single lesson, add its id to <code>lessons</code> (or <code>'-id'</code> to take it out). If the final is cumulative, add the midterm modules to the final track. Nothing else in the site needs to change.</p>`;
   }
 
   /* Hidden test page for the PHP runner (#php-lab): not linked from the menus. */
@@ -780,6 +861,7 @@ echo "Welcome, local user " . $_SERVER['REMOTE_ADDR'];
   function route() {
     clearInterval(timerId);
     document.body.classList.remove('has-full');
+    setMenu(false);
     const hsh = (location.hash || '#home').slice(1);
     document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', hsh.startsWith(a.dataset.nav) || (a.dataset.nav === 'learn' && hsh.startsWith('lesson-'))));
     if (hsh.startsWith('lesson-')) viewLesson(hsh.slice(7));
