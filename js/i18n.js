@@ -51,6 +51,7 @@ const I18N = (() => {
       lineAdded: 'Added to your code at the cursor. Press Run or Check to see the effect.', hintNoMore: 'Your code already has every line of the model answer. Press Check to see what is still wrong.', hintsUsed: n => `Hints used: ${n}`,
       mcqHint: 'Hint: remove a wrong answer', ptPlay: 'Playground', playLead: 'Free space to write and run your own HTML, CSS and JavaScript. Saved automatically in this browser.', playClear: 'Clear all',
       hideMenu: 'Hide menu', showMenu: 'Show menu', menu: 'Menu', hideShort: 'Hide', resizeMenu: 'Drag to change the menu width (double-click to reset)', fullTip: 'Full screen: editor and result fill the whole screen (Esc to exit)', exitFull: 'Exit full screen (Esc)', layoutTip: 'Switch layout: code beside the result, or code on top with the result below',
+      simplerShow: 'Simpler explanation', simplerHide: 'Hide the simpler explanation', simplerTitle: 'In simpler words',
       phpLoading: 'Loading PHP… (a few MB, the first time only)', phpLoadFail: 'Could not load the PHP runtime. Check your internet connection and press Run again.',
       phpNewVisitor: 'New visitor', phpNewVisitorTip: 'Start again as a new visitor: no cookies, no session, fresh database',
       phpRaw: 'Show the HTML that the script sent', phpFiles: 'Files and database on this server',
@@ -108,6 +109,7 @@ const I18N = (() => {
       lineAdded: 'انضاف للكود حقك مكان المؤشر. اضغط Run أو صحّح جوابي عشان تشوف النتيجة.', hintNoMore: 'الكود حقك فيه كل أسطر الحل النموذجي. اضغط "صحّح جوابي" عشان تشوف وش باقي غلط.', hintsUsed: n => `التلميحات المستخدمة: ${n}`,
       mcqHint: 'تلميح: شيل جواب غلط', ptPlay: 'ساحة الكود', playLead: 'مكان حر تكتب فيه HTML و CSS و JavaScript حقك وتشغّله. ينحفظ تلقائي في هالـ browser.', playClear: 'امسح الكل',
       hideMenu: 'خبّي القائمة', showMenu: 'اعرض القائمة', menu: 'القائمة', hideShort: 'خبّي', resizeMenu: 'اسحب عشان تغيّر عرض القائمة (دبل كلك يرجعها للأصل)', fullTip: 'شاشة كاملة: المحرر والنتيجة ياخذون الشاشة كلها (Esc للخروج)', exitFull: 'اطلع من الشاشة الكاملة (Esc)', layoutTip: 'غيّر الترتيب: الكود جنب النتيجة، أو الكود فوق والنتيجة تحت',
+      simplerShow: 'شرح أبسط', simplerHide: 'خبّي الشرح الأبسط', simplerTitle: 'بكلام أبسط',
       phpLoading: 'قاعد أحمّل الـ PHP… (كم MB، أول مرة بس)', phpLoadFail: 'ما قدرت أحمّل الـ PHP runtime. تأكد من الإنترنت واضغط Run مرة ثانية.',
       phpNewVisitor: 'زائر جديد', phpNewVisitorTip: 'ابدأ من جديد كزائر جديد: بدون cookies، بدون session، وقاعدة بيانات جديدة',
       phpRaw: 'اعرض الـ HTML اللي طلّعه السكربت', phpFiles: 'الملفات وقاعدة البيانات اللي على هالـ server',
@@ -153,7 +155,7 @@ const I18N = (() => {
     if (!A) return L;
     const out = Object.assign({}, L);
     if (A.title) out.title = A.title;
-    ['big', 'simple', 'points', 'exam', 'summary'].forEach(k => { if (A[k]) out[k] = A[k]; });
+    ['big', 'simple', 'simpler', 'points', 'exam', 'summary'].forEach(k => { if (A[k]) out[k] = A[k]; });
     if (A.deeper && A.deeper.length === L.deeper.length) {
       out.deeper = L.deeper.map((d, i) => {
         const x = A.deeper[i];

@@ -5,7 +5,7 @@ const U = (() => {
   /* Mini markdown: paragraphs, "- " lists, [[code]], **bold**. Input is plain text. */
   function md(src) {
     const inline = t => esc(t)
-      .replace(/\[\[(.+?)\]\]/g, (_, c) => '<code>' + c + '</code>')
+      .replace(/\[\[(.+?)\]\](?!\])/g, (_, c) => '<code>' + c + '</code>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     return String(src).trim().split(/\n\s*\n/).map(block => {
       const lines = block.split('\n').map(l => l.trim()).filter(Boolean);

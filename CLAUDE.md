@@ -40,6 +40,7 @@ It is hosted on **GitHub Pages** from the `main` branch root. There is no server
 | `js/content.js`, `content2.js` | `MODULES`, `STEP_NAMES`, and the first 20 lessons |
 | `js/content3.js` | 8 lessons from the lecture notes, spliced into `LESSONS` after given ids |
 | `js/content-ar*.js` | `LESSONS_AR[id]` |
+| `js/content-simpler.js` | `SIMPLER[id] = {en, ar}` for the first 28 lessons; newer lessons carry `simpler` in the lesson itself |
 | `js/questions.js` (+ `questions-ar.js`) | `QUESTIONS` and `PUZZLES`, aligned 1:1 with `QUESTIONS_AR` |
 | `js/questions2.js` | Extra questions, each carrying its own `ar` field |
 | `js/exam.js` | `SCENARIOS` and `EXAM.PARTS` (spec, model, grade) for the mock midterm |
@@ -50,6 +51,7 @@ It is hosted on **GitHub Pages** from the `main` branch root. There is no server
 ```js
 { id, module, title,
   big, simple,                       // markdown-lite strings
+  simpler?,                          // optional "Simpler explanation" (shown on demand on step 2)
   deeper: [ string | {code, lang} | {try: {task, html, css?, js?}} ],
   points: [string], exam: [string],
   mistakes: [{lang, wrong, right, why}],

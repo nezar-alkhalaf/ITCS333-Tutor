@@ -422,3 +422,9 @@ details.phpinfo { margin: -6px 0 16px; }
   .top-menu .track-seg { flex: 1 1 100%; }
   .top-menu .track-seg button { flex: 1; }
 }
+
+/* Simpler explanation (optional box on the Simple Explanation step) */
+.simpler { margin-top: 18px; }
+.simpler-box { margin-top: 12px; padding: 14px 18px 4px; border: 1px dashed var(--good); background: var(--good-soft); border-radius: 10px; }
+.simpler-box .s-title { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--good); margin-bottom: 6px; }
+[dir="rtl"] .simpler-box .s-title { letter-spacing: 0; }

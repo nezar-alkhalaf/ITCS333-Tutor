@@ -449,7 +449,17 @@ $user = $stmt->fetch();
       const add = html => body.insertAdjacentHTML('beforeend', html);
       const SN = i => I18N.stepName(i);
       if (step === 0) { add('<h2>' + SN(0) + '</h2>' + md(L.big)); }
-      if (step === 1) { add('<h2>' + SN(1) + '</h2>' + md(L.simple)); if (L.ar) add('<div class="ar" lang="ar">' + L.ar + '</div>'); }
+      if (step === 1) {
+        add('<h2>' + SN(1) + '</h2>' + md(L.simple)); if (L.ar) add('<div class="ar" lang="ar">' + L.ar + '</div>');
+        if (L.simpler) {   /* optional: hidden until asked for, remembered per lesson */
+          const on = () => !!U.store.get('simpler', {})[id];
+          add(`<div class="simpler"><button class="btn" type="button" aria-expanded="false" aria-controls="simplerBox"></button><div class="simpler-box" id="simplerBox" hidden><div class="s-title">${t('simplerTitle')}</div>${md(L.simpler)}</div></div>`);
+          const btn = $('.simpler button', body), box = $('.simpler-box', body);
+          const paint = () => { box.hidden = !on(); btn.setAttribute('aria-expanded', String(on())); btn.textContent = '💡 ' + t(on() ? 'simplerHide' : 'simplerShow'); };
+          btn.addEventListener('click', () => { const m = U.store.get('simpler', {}); m[id] = !m[id]; U.store.set('simpler', m); paint(); });
+          paint();
+        }
+      }
       if (step === 2) {
         add('<h2>' + SN(2) + '</h2>');
         L.deeper.forEach(part => {
