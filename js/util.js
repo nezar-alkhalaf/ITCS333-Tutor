@@ -218,13 +218,66 @@ const U = (() => {
   }
 
   /* ---------- Runner: builds a document from html/css/js and loads it in an iframe ---------- */
+  /* Mock web API for the sandbox (it has no internet). fetch('/api/...') answers with fixed JSON after a short delay.
+     Routes: GET /api/students, /api/students/<id>, /api/courses, /api/courses/<code>, /api/weather?city=Manama,
+     POST /api/students (JSON body) -> 201, /api/error -> 500, /api/offline -> network failure, /api/text -> plain text.
+     Add ?delay=<ms> to any route (default 300). Every request is recorded in window.__apiLog for grading. */
+  function mockApi() {
+    var DATA = {
+      students: [{ id: 1, name: 'Ali', major: 'CS', gpa: 3.4 }, { id: 2, name: 'Sara', major: 'CE', gpa: 3.9 }, { id: 3, name: 'Hassan', major: 'IS', gpa: 2.1 }, { id: 4, name: 'Maryam', major: 'CS', gpa: 3.1 }],
+      courses: [{ code: 'ITCS333', title: 'Internet Software Development', credits: 3 }, { code: 'ITCS214', title: 'Data Structures', credits: 3 }, { code: 'ITCS285', title: 'Database Management Systems', credits: 3 }],
+      weather: { Manama: { city: 'Manama', temp: 24, sky: 'Sunny' }, Muharraq: { city: 'Muharraq', temp: 23, sky: 'Cloudy' }, Riffa: { city: 'Riffa', temp: 25, sky: 'Windy' } }
+    };
+    window.__apiLog = [];
+    window.fetch = function (input, init) {
+      init = init || {};
+      var url = String(input && input.url ? input.url : input);
+      var m = url.match(/\/api\/([^?#]*)(?:\?([^#]*))?/);
+      var q = new URLSearchParams(m ? m[2] || '' : '');
+      var delay = q.has('delay') ? +q.get('delay') : 300;
+      var method = String(init.method || 'GET').toUpperCase();
+      var headers = {}; try { new Headers(init.headers || {}).forEach(function (v, k) { headers[k] = v; }); } catch (e) { }
+      window.__apiLog.push({ url: url, method: method, body: init.body === undefined ? null : init.body, headers: headers });
+      return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+          if (!m) return reject(new TypeError('Failed to fetch (the practice sandbox has no internet: use an /api/... address)'));
+          var path = m[1].replace(/\/$/, ''), parts = path.split('/');
+          var send = function (status, body) {
+            var text = typeof body === 'string' ? body : JSON.stringify(body);
+            resolve(new Response(text, { status: status, headers: { 'Content-Type': typeof body === 'string' ? 'text/plain' : 'application/json' } }));
+          };
+          if (path === 'offline') return reject(new TypeError('Failed to fetch'));
+          if (path === 'error') return send(500, { error: 'Server error' });
+          if (path === 'text') return send(200, 'Hello from the server');
+          if (parts[0] === 'students' || parts[0] === 'courses') {
+            var list = DATA[parts[0]];
+            if (method === 'POST' && !parts[1]) {
+              var o; try { o = JSON.parse(init.body); } catch (e) { return send(400, { error: 'The body is not valid JSON' }); }
+              if (!o || typeof o !== 'object') return send(400, { error: 'Send a JSON object' });
+              o.id = list.length + 1; return send(201, o);
+            }
+            if (parts[1]) {
+              var item = list.filter(function (x) { return String(x.id || x.code).toLowerCase() === parts[1].toLowerCase(); })[0];
+              return item ? send(200, item) : send(404, { error: 'Not found' });
+            }
+            return send(200, list);
+          }
+          if (parts[0] === 'weather') { var w = DATA.weather[q.get('city') || 'Manama']; return w ? send(200, w) : send(404, { error: 'Unknown city' }); }
+          send(404, { error: 'Not found' });
+        }, delay);
+      });
+    };
+  }
+
   let runSeq = 0;
   function buildDoc(parts, extraScript) {
     const id = ++runSeq;
     const prelude = '<script>(function(){var R=' + id + ';function S(t,m){try{parent.postMessage({__wdl:R,type:t,msg:m},"*")}catch(e){}}' +
-      '["log","warn","error","info"].forEach(function(k){var o=console[k];console[k]=function(){var a=[].slice.call(arguments).map(function(x){try{return typeof x==="object"&&x!==null?(x.nodeType?"<"+x.nodeName.toLowerCase()+"> element":JSON.stringify(x)):String(x)}catch(e){return String(x)}});S(k==="info"?"log":k,a.join(" "));o.apply(console,arguments)}});' +
+      '["log","warn","error","info"].forEach(function(k){var o=console[k];console[k]=function(){var a=[].slice.call(arguments).map(function(x){try{return typeof x==="object"&&x!==null?(x.nodeType?"<"+x.nodeName.toLowerCase()+"> element":x instanceof Promise?"Promise {…}":x instanceof Response?"Response {status: "+x.status+", ok: "+x.ok+"}":x instanceof Error?x.name+": "+x.message:JSON.stringify(x)):String(x)}catch(e){return String(x)}});S(k==="info"?"log":k,a.join(" "));o.apply(console,arguments)}});' +
       'window.alert=function(m){S("alert","alert: "+m)};window.confirm=function(){return true};window.prompt=function(){return ""};' +
       'window.addEventListener("error",function(e){S("error",e.message+(e.lineno?" (line "+e.lineno+")":""))});' +
+      'window.addEventListener("unhandledrejection",function(e){var r=e.reason;S("error","Uncaught (in promise) "+(r&&r.message?(r.name?r.name+": ":"")+r.message:String(r)))});' +
+      '(' + mockApi.toString() + ')();' +
       'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(a&&!/^#/.test(a.getAttribute("href")||"")){e.preventDefault();S("log","(link to "+a.getAttribute("href")+" — links are disabled in the preview)")}});' +
       'window.__subs=[];window.addEventListener("submit",function(e){window.__subs.push(e.defaultPrevented);if(!e.defaultPrevented){e.preventDefault();S("warn","The form was submitted and the page would reload. Call event.preventDefault() in your submit listener to stop that.")}});' +
       '})();<\/script>';
