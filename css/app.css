@@ -16,6 +16,7 @@
   --c-html: #E0562E;
   --c-css: #2B7BF0;
   --c-js: #C99700;
+  --c-php: #7A5CC7;
   --code-bg: #0F1722;
   --code-ink: #DCE6F2;
   --font-display: "Bricolage Grotesque", "Readex Pro", "Segoe UI", system-ui, sans-serif;
@@ -32,7 +33,7 @@
     --bg: #0B1118; --surface: #121B26; --ink: #E5ECF4; --muted: #92A2B4; --line: #233140;
     --accent: #7E97FF; --accent-soft: #1C2647; --good: #3CCB8E; --good-soft: #10291F;
     --bad: #FF7A6E; --bad-soft: #351816; --warn: #F2C04D; --warn-soft: #2E2611;
-    --c-html: #FF7A52; --c-css: #5EA2FF; --c-js: #F2C94C; --code-bg: #070C12; --code-ink: #DCE6F2;
+    --c-html: #FF7A52; --c-css: #5EA2FF; --c-js: #F2C94C; --c-php: #A994F0; --code-bg: #070C12; --code-ink: #DCE6F2;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.3);
     color-scheme: dark;
   }
@@ -41,7 +42,7 @@
   --bg: #0B1118; --surface: #121B26; --ink: #E5ECF4; --muted: #92A2B4; --line: #233140;
   --accent: #7E97FF; --accent-soft: #1C2647; --good: #3CCB8E; --good-soft: #10291F;
   --bad: #FF7A6E; --bad-soft: #351816; --warn: #F2C04D; --warn-soft: #2E2611;
-  --c-html: #FF7A52; --c-css: #5EA2FF; --c-js: #F2C94C; --code-bg: #070C12; --code-ink: #DCE6F2;
+  --c-html: #FF7A52; --c-css: #5EA2FF; --c-js: #F2C94C; --c-php: #A994F0; --code-bg: #070C12; --code-ink: #DCE6F2;
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.3);
   color-scheme: dark;
 }
@@ -106,6 +107,7 @@ ul.clean { list-style: none; padding: 0; margin: 0; }
 .chip.html { color: var(--c-html); border-color: color-mix(in srgb, var(--c-html) 40%, transparent); }
 .chip.css { color: var(--c-css); border-color: color-mix(in srgb, var(--c-css) 40%, transparent); }
 .chip.js { color: var(--c-js); border-color: color-mix(in srgb, var(--c-js) 45%, transparent); }
+.chip.php { color: var(--c-php); border-color: color-mix(in srgb, var(--c-php) 40%, transparent); }
 .chip.done { color: var(--good); background: var(--good-soft); border-color: transparent; }
 
 /* Home */
@@ -182,7 +184,7 @@ body.no-ar .ar { display: none; }
 pre.code { position: relative; background: var(--code-bg); color: var(--code-ink); padding: 14px 16px; border-radius: 9px; overflow-x: auto; font-size: .86rem; line-height: 1.65; margin: 0 0 14px; tab-size: 2; }
 pre.code[data-lang]::after { content: attr(data-lang); position: absolute; top: 6px; right: 10px; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: #7F90A6; }
 .tk-tag { color: #FF8A65; } .tk-attr { color: #FFCB6B; } .tk-str { color: #A5E075; } .tk-com { color: #6B7A8F; font-style: italic; }
-.tk-kw { color: #C792EA; } .tk-num { color: #F78C6C; } .tk-prop { color: #82AAFF; } .tk-sel { color: #FFCB6B; } .tk-fn { color: #82AAFF; } .tk-punc { color: #89DDFF; }
+.tk-var { color: #F6C177; } .tk-kw { color: #C792EA; } .tk-num { color: #F78C6C; } .tk-prop { color: #82AAFF; } .tk-sel { color: #FFCB6B; } .tk-fn { color: #82AAFF; } .tk-punc { color: #89DDFF; }
 
 /* Editor */
 .lab { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 10px 0 16px; }
@@ -380,3 +382,17 @@ body.has-full .topbar { visibility: hidden; }
 .hint-card .btn { justify-self: start; }
 .mcq-hint { margin: -2px 0 10px; }
 .opt.struck { opacity: .45; text-decoration: line-through; }
+
+/* PHP lab: fake request bar and raw output */
+.reqbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--surface); font-family: var(--font-code); font-size: .78rem; }
+.reqbar label { display: flex; align-items: center; gap: 4px; color: var(--muted); min-width: 0; }
+.reqbar label.grow { flex: 1 1 150px; }
+.reqbar label[hidden] { display: none; }
+.reqbar input, .reqbar select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; min-width: 0; }
+.reqbar label.grow input { flex: 1; width: 100%; }
+.reqbar .btn { font-family: var(--font-body); }
+.rawout { border-top: 1px solid var(--line); font-size: .8rem; }
+.rawout summary { cursor: pointer; padding: 5px 10px; color: var(--muted); font-weight: 600; }
+.rawout pre.code { margin: 0; border-radius: 0; max-height: 220px; overflow: auto; }
+.lab.lab-full .rawout pre.code { max-height: 25vh; }
+details.phpinfo { margin: -6px 0 16px; }

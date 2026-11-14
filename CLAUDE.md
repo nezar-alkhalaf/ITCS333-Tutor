@@ -42,7 +42,8 @@ It is hosted on **GitHub Pages** from the `main` branch root. There is no server
 | `js/questions.js` (+ `questions-ar.js`) | `QUESTIONS` and `PUZZLES`, aligned 1:1 with `QUESTIONS_AR` |
 | `js/questions2.js` | Extra questions, each carrying its own `ar` field |
 | `js/exam.js` | `SCENARIOS` and `EXAM.PARTS` (spec, model, grade) for the mock midterm |
-| `js/app.js` | Hash router (`#home`, `#learn`, `#lesson-<id>`, `#practice*`, `#exam`, `#guide`) and views: `lab()`, `quiz()`, `helpPanel()`, `challenge()` |
+| `js/php-runner.js` | `PHPRUN`: PHP 8.4 in the browser (php-wasm + PDO SQLite, lazy, pinned). Fake requests, cookies, sessions, `mysql:` DSN mapped to SQLite. See the decision in `PLAN-FINAL.md` section 2 |
+| `js/app.js` | Hash router (`#home`, `#learn`, `#lesson-<id>`, `#practice*`, `#exam`, `#guide`, hidden `#php-lab`) and views: `lab()` (web, js and php modes), `quiz()`, `helpPanel()`, `challenge()` |
 
 ### Content schema (lesson)
 ```js

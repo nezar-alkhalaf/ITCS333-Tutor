@@ -90,6 +90,23 @@ Spike this first (step 1). Pick the option that meets all of the following:
 
 **Fallback** if neither works within one session: build the PHP lessons as **"predict the output"** and **"fill the missing line"** exercises with fixed expected outputs, and keep the runner for later.
 
+### Decision (step 1, done): `php-wasm` by seanmorris
+
+- **Runtime:** `php-wasm@0.2.0` + `php-wasm-sqlite@0.2.0` (PHP 8.4), imported as ES modules from jsDelivr with pinned versions. Nothing is downloaded until the first PHP run; `js/php-runner.js` itself is a small plain script. `@php-wasm/web` was rejected because it needs a bundler.
+- **Not verified from the build sandbox:** the sandbox blocks jsDelivr, so the runner was tested against the same npm tarballs served locally. Open `#php-lab` on the live site once to confirm the CDN path.
+- **`js/php-runner.js` (`PHPRUN`):**
+  - `PHPRUN.send(code, req, visitor, {db, files, reseed})` runs one request. `req = {method, query, body, ip, cookies}`; `query` and `body` are url-encoded strings, parsed by PHP's own `parse_str`, so `x[]` arrays work.
+  - `PHPRUN.play(code, requests, {db, files})` sends several requests as one new visitor (used for grading).
+  - A result has `html`, `text`, `errors` (with line numbers), `setCookies`, `cookies`, `session`, `redirect`, `died`, `status`.
+- **What is real and what is simulated:**
+  - Real PHP: `$_GET/$_POST/$_COOKIE/$_SERVER`, `setcookie`, `header`, sessions (PHP's own session files, found again through the `PHPSESSID` cookie), PDO.
+  - `new PDO("mysql:host=...;dbname=X", user, pass)` is routed to a SQLite file seeded from the exercise's `db: {name, user, pass, sql}`. A wrong database name or password throws a `PDOException` like MySQL would. Seed SQL must be SQLite-compatible.
+  - `die()` / `exit` are rewritten to a sandbox function, so cookies and headers can still be reported.
+  - Each request runs from scratch (`php.refresh()`), so nothing leaks between requests except cookies, sessions and the database.
+- **Limits:** no real file uploads (`move_uploaded_file` cannot work, so pattern 9 is a read-the-code lesson); an infinite loop freezes the tab, like in the JS labs; SQL is SQLite's dialect.
+- **UI:** `lab()` has a `php` mode: request bar (method, query string, POST body, IP), rendered page, raw HTML, and a log (errors, `Set-Cookie`, `Location`, `die`, the cookie jar, `$_SESSION`). Submitting a form inside the preview sends the next request.
+- **Challenges:** `challenge: { mode: 'php', tabs: ['php'], requests: [...], db?, files?, checks: [{d, t(results, src)}] }`.
+
 **Grading PHP challenges:** run the student's code with 2–3 fake requests. Each check reads the **output DOM** or text (for example "row for Nino is yellow", "total is 3.85", "says No Camera selected when nothing is ticked"). Same `checks[{d, t}]` idea as the JS challenges.
 
 ## 3. Steps (in order; commit after each)

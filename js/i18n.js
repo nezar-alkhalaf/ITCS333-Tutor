@@ -44,7 +44,14 @@ const I18N = (() => {
       hint: 'Hint', hintNext: 'Next step:', hintAllPass: 'Everything already passes. Press Check my answer.', hintLine: 'Next line from the model answer', addLine: 'Add this line to my code',
       lineAdded: 'Added to your code at the cursor. Press Run or Check to see the effect.', hintNoMore: 'Your code already has every line of the model answer. Press Check to see what is still wrong.', hintsUsed: n => `Hints used: ${n}`,
       mcqHint: 'Hint: remove a wrong answer', ptPlay: 'Playground', playLead: 'Free space to write and run your own HTML, CSS and JavaScript. Saved automatically in this browser.', playClear: 'Clear all',
-      hideMenu: 'Hide menu', showMenu: 'Show menu', menu: 'Menu', hideShort: 'Hide', resizeMenu: 'Drag to change the menu width (double-click to reset)', fullTip: 'Full screen: editor and result fill the whole screen (Esc to exit)', exitFull: 'Exit full screen (Esc)', layoutTip: 'Switch layout: code beside the result, or code on top with the result below'
+      hideMenu: 'Hide menu', showMenu: 'Show menu', menu: 'Menu', hideShort: 'Hide', resizeMenu: 'Drag to change the menu width (double-click to reset)', fullTip: 'Full screen: editor and result fill the whole screen (Esc to exit)', exitFull: 'Exit full screen (Esc)', layoutTip: 'Switch layout: code beside the result, or code on top with the result below',
+      phpLoading: 'Loading PHP… (a few MB, the first time only)', phpLoadFail: 'Could not load the PHP runtime. Check your internet connection and press Run again.',
+      phpNewVisitor: 'New visitor', phpNewVisitorTip: 'Start again as a new visitor: no cookies, no session, fresh database',
+      phpRaw: 'Show the HTML that the script sent', phpFiles: 'Files and database on this server',
+      phpDb: (n, u, p) => `Database "${n}" (user "${u}", password "${p}"). The exam form new PDO("mysql:host=localhost;dbname=${n}", ...) works here: the sandbox answers it with these tables. They are reset on every Run.`,
+      phpLink: h => `(link to ${h}: only this one page exists in the sandbox)`, phpDied: 'die() / exit stopped the script here',
+      phpRedirect: u => `header Location: the browser would now go to ${u}`, phpCookieGone: 'deleted', phpCookieSession: 'until the browser closes',
+      phpDays: d => `expires in ${d} day${d === 1 ? '' : 's'}`, phpSecs: s => `expires in ${s} s`, phpJar: 'Cookies in the browser now:', phpEmpty: '(the script printed nothing)'
     },
     ar: {
       navLearn: 'الدروس', navPractice: 'تدريب', navExam: 'امتحان تجريبي', navGuide: 'طريقة الاستخدام', brandSub: 'الميد: HTML · CSS · JS',
@@ -88,7 +95,14 @@ const I18N = (() => {
       hint: 'تلميح', hintNext: 'الخطوة الجاية:', hintAllPass: 'كل شي صح. اضغط "صحّح جوابي".', hintLine: 'السطر الجاي من الحل النموذجي', addLine: 'أضف هالسطر للكود حقي',
       lineAdded: 'انضاف للكود حقك مكان المؤشر. اضغط Run أو صحّح جوابي عشان تشوف النتيجة.', hintNoMore: 'الكود حقك فيه كل أسطر الحل النموذجي. اضغط "صحّح جوابي" عشان تشوف وش باقي غلط.', hintsUsed: n => `التلميحات المستخدمة: ${n}`,
       mcqHint: 'تلميح: شيل جواب غلط', ptPlay: 'ساحة الكود', playLead: 'مكان حر تكتب فيه HTML و CSS و JavaScript حقك وتشغّله. ينحفظ تلقائي في هالـ browser.', playClear: 'امسح الكل',
-      hideMenu: 'خبّي القائمة', showMenu: 'اعرض القائمة', menu: 'القائمة', hideShort: 'خبّي', resizeMenu: 'اسحب عشان تغيّر عرض القائمة (دبل كلك يرجعها للأصل)', fullTip: 'شاشة كاملة: المحرر والنتيجة ياخذون الشاشة كلها (Esc للخروج)', exitFull: 'اطلع من الشاشة الكاملة (Esc)', layoutTip: 'غيّر الترتيب: الكود جنب النتيجة، أو الكود فوق والنتيجة تحت'
+      hideMenu: 'خبّي القائمة', showMenu: 'اعرض القائمة', menu: 'القائمة', hideShort: 'خبّي', resizeMenu: 'اسحب عشان تغيّر عرض القائمة (دبل كلك يرجعها للأصل)', fullTip: 'شاشة كاملة: المحرر والنتيجة ياخذون الشاشة كلها (Esc للخروج)', exitFull: 'اطلع من الشاشة الكاملة (Esc)', layoutTip: 'غيّر الترتيب: الكود جنب النتيجة، أو الكود فوق والنتيجة تحت',
+      phpLoading: 'قاعد أحمّل الـ PHP… (كم MB، أول مرة بس)', phpLoadFail: 'ما قدرت أحمّل الـ PHP runtime. تأكد من الإنترنت واضغط Run مرة ثانية.',
+      phpNewVisitor: 'زائر جديد', phpNewVisitorTip: 'ابدأ من جديد كزائر جديد: بدون cookies، بدون session، وقاعدة بيانات جديدة',
+      phpRaw: 'اعرض الـ HTML اللي طلّعه السكربت', phpFiles: 'الملفات وقاعدة البيانات اللي على هالـ server',
+      phpDb: (n, u, p) => `قاعدة البيانات "${n}" (الـ user "${u}" والـ password "${p}"). صيغة الامتحان new PDO("mysql:host=localhost;dbname=${n}", ...) تشتغل هني: الـ sandbox يرد عليها بهالجداول. وترجع لأصلها مع كل Run.`,
+      phpLink: h => `(رابط لـ ${h}: في الـ sandbox ما في إلا هالصفحة)`, phpDied: 'الـ die() / exit وقّف السكربت هني',
+      phpRedirect: u => `header Location: الـ browser الحين بيروح لـ ${u}`, phpCookieGone: 'انمسح', phpCookieSession: 'لين يتسكر الـ browser',
+      phpDays: d => `ينتهي بعد ${d} يوم`, phpSecs: s => `ينتهي بعد ${s} ثانية`, phpJar: 'الـ cookies اللي في الـ browser الحين:', phpEmpty: '(السكربت ما طبع شي)'
     }
   };
   const MOD_AR = {

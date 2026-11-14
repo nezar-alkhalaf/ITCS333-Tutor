@@ -79,7 +79,88 @@ const U = (() => {
     }
     return out + esc(code.slice(i));
   }
-  const hl = (lang, code) => lang === 'css' ? hlCSS(code) : lang === 'js' ? hlJS(code) : hlHTML(code);
+  /* ---------- PHP: scanner (shared by the highlighter and the PHP runner) ---------- */
+  /* Splits a .php source into pieces: html (outside the PHP tags), tag (<?php, <?=, ?>), com, str, code. */
+  function phpScan(src) {
+    src = String(src);
+    const out = [], n = src.length;
+    const push = (t, s) => { if (s) out.push({ t, s }); };
+    const open = /<\?(?:php(?![\w])|=)/gi;
+    const tok = /(\?>)|(\/\/|#(?!\[))|(\/\*[\s\S]*?(?:\*\/|$))|('(?:\\[\s\S]|[^'\\])*'?)|("(?:\\[\s\S]|[^"\\])*"?)|(<<<[ \t]*(['"]?)(\w+)\7\r?\n[\s\S]*?\n[ \t]*\8\b)|([^'"\/#?<]+|[\s\S])/y;
+    let i = 0, inPhp = false;
+    while (i < n) {
+      if (!inPhp) {
+        open.lastIndex = i;
+        const m = open.exec(src);
+        if (!m) { push('html', src.slice(i)); break; }
+        push('html', src.slice(i, m.index)); push('tag', m[0]);
+        i = m.index + m[0].length; inPhp = true;
+        continue;
+      }
+      tok.lastIndex = i;
+      const m = tok.exec(src);
+      if (m[1]) { push('tag', m[1]); inPhp = false; i = tok.lastIndex; }
+      else if (m[2]) {
+        let e = src.indexOf('\n', i); if (e < 0) e = n;
+        const c = src.indexOf('?>', i); if (c > -1 && c < e) e = c;
+        push('com', src.slice(i, e)); i = e;
+      }
+      else if (m[3]) { push('com', m[3]); i = tok.lastIndex; }
+      else if (m[4] || m[5] || m[6]) { push('str', m[0]); i = tok.lastIndex; }
+      else {
+        const last = out[out.length - 1];
+        if (last && last.t === 'code') last.s += m[0]; else push('code', m[0]);
+        i = tok.lastIndex;
+      }
+    }
+    return out;
+  }
+  const PHP_KW = 'abstract|and|array|as|break|case|catch|class|const|continue|default|die|do|echo|else|elseif|empty|endfor|endforeach|endif|endwhile|exit|extends|false|final|finally|fn|for|foreach|function|global|if|include|include_once|isset|list|new|null|or|print|private|protected|public|require|require_once|return|static|switch|throw|true|try|unset|use|var|while';
+  function hlPHP(code) {
+    const re = new RegExp('(\\$\\w+)|\\b(' + PHP_KW + ')\\b|\\b(\\d+(?:\\.\\d+)?)\\b|([A-Za-z_]\\w*)(?=\\s*\\()|([{}()[\\];,.=+\\-*/<>!&|?:])', 'gi');
+    return phpScan(code).map(p => {
+      if (p.t === 'html') return hlHTML(p.s);
+      if (p.t === 'tag') return span('tag', p.s);
+      if (p.t === 'com') return span('com', p.s);
+      if (p.t === 'str') return span('str', p.s);
+      let out = '', last = 0, m; re.lastIndex = 0;
+      while ((m = re.exec(p.s))) {
+        out += esc(p.s.slice(last, m.index));
+        if (m[1]) out += span('var', m[1]);
+        else if (m[2]) out += span('kw', m[2]);
+        else if (m[3]) out += span('num', m[3]);
+        else if (m[4]) out += span('fn', m[4]);
+        else out += span('punc', m[5]);
+        last = re.lastIndex;
+      }
+      return out + esc(p.s.slice(last));
+    }).join('');
+  }
+  function hlSQL(code) {
+    const re = /(--[^\n]*)|('(?:''|[^'])*')|\b(SELECT|FROM|WHERE|AND|OR|NOT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|ORDER|BY|ASC|DESC|LIMIT|CREATE|TABLE|PRIMARY|KEY|NULL|LIKE|IN|BETWEEN|AS|COUNT|SUM|AVG|MIN|MAX|JOIN|ON|GROUP|HAVING|INT|INTEGER|VARCHAR|TEXT|DECIMAL|AUTO_INCREMENT|DROP|DISTINCT|IS)\b|\b(\d+(?:\.\d+)?)\b|(:\w+|\?)|([(),;=*<>])/gi;
+    let out = '', last = 0, m;
+    while ((m = re.exec(code))) {
+      out += esc(code.slice(last, m.index));
+      if (m[1]) out += span('com', m[1]);
+      else if (m[2]) out += span('str', m[2]);
+      else if (m[3]) out += span('kw', m[3]);
+      else if (m[4]) out += span('num', m[4]);
+      else if (m[5]) out += span('var', m[5]);
+      else out += span('punc', m[6]);
+      last = re.lastIndex;
+    }
+    return out + esc(code.slice(last));
+  }
+  /* An HTTP message: first line and header names stand out, the rest is plain. */
+  function hlHTTP(code) {
+    return code.split('\n').map((l, i) => {
+      if (i === 0) return span('kw', l);
+      const m = l.match(/^([\w-]+)(:)(.*)$/);
+      return m ? span('prop', m[1]) + span('punc', m[2]) + span('str', m[3]) : esc(l);
+    }).join('\n');
+  }
+  const HL = { css: hlCSS, js: hlJS, json: hlJS, php: hlPHP, sql: hlSQL, http: hlHTTP, text: esc, html: hlHTML };
+  const hl = (lang, code) => (HL[lang] || hlHTML)(code);
   const codeBlock = (lang, code) => '<pre class="code" data-lang="' + lang + '"><code>' + hl(lang, code.replace(/^\n/, '').replace(/\s+$/, '')) + '</code></pre>';
 
   /* ---------- Storage (safe) ---------- */
@@ -218,5 +299,5 @@ const U = (() => {
   /* Code without comments, for static checks */
   const strip = src => String(src || '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-  return { esc, md, hl, codeBlock, store, editor, run, hiddenFrame, findRule, normColor, strip, normSel };
+  return { esc, md, hl, codeBlock, store, editor, run, hiddenFrame, findRule, normColor, strip, normSel, phpScan };
 })();

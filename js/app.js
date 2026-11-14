@@ -6,7 +6,8 @@
   const h = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const moduleOf = id => MODULES.find(m => m.id === id);
   const lessonsOf = mid => LESSONS.filter(l => l.module === mid);
-  const LANG_COLOR = { html: 'var(--c-html)', css: 'var(--c-css)', js: 'var(--c-js)' };
+  const LANG_COLOR = { html: 'var(--c-html)', css: 'var(--c-css)', js: 'var(--c-js)', php: 'var(--c-php)' };
+  const LANG_LABEL = l => l === 'js' ? 'JavaScript' : l.toUpperCase();
   QUESTIONS.forEach((q, i) => q.id = 'q' + i);
 
   /* ---------- progress ---------- */
@@ -43,9 +44,10 @@
   /* ---------- shared widgets ---------- */
   /* Live lab: editors + preview + console */
   function lab(host, cfg, opts = {}) {
-    const mode = cfg.mode || (cfg.html !== undefined || cfg.css !== undefined ? 'web' : 'js');
-    const langs = opts.tabs || (mode === 'js' ? ['js'] : ['html', 'css', 'js'].filter(l => cfg[l] !== undefined && (l !== 'js' || cfg.js !== undefined)));
-    if (!opts.tabs && mode !== 'js' && !langs.includes('html')) langs.unshift('html');
+    const mode = cfg.mode || (cfg.php !== undefined ? 'php' : cfg.html !== undefined || cfg.css !== undefined ? 'web' : 'js');
+    const isPhp = mode === 'php';
+    const langs = isPhp ? ['php'] : opts.tabs || (mode === 'js' ? ['js'] : ['html', 'css', 'js'].filter(l => cfg[l] !== undefined && (l !== 'js' || cfg.js !== undefined)));
+    if (!isPhp && !opts.tabs && mode !== 'js' && !langs.includes('html')) langs.unshift('html');
     const stacked = mode === 'js' || U.store.get('labStack', false);
     const wrap = h(`<div class="lab ${stacked ? 'stack' : ''}">
       <div class="panel"><div class="panel-head"><div class="tabs" role="tablist"></div><div class="row"><button class="btn small ghost" data-act="layout" type="button" title="${t('layoutTip')}" aria-label="${t('layoutTip')}">⇵</button><button class="btn small ghost" data-act="full" type="button" title="${t('fullTip')}" aria-label="${t('fullTip')}" aria-pressed="false">⛶</button><button class="btn small ghost" data-act="reset" type="button">${t('reset')}</button><button class="btn small primary" data-act="run" type="button">${t('run')}</button></div></div><div class="eds"></div></div>
@@ -58,7 +60,7 @@
     const initial = {};
     langs.forEach((l, i) => {
       initial[l] = cfg[l] || '';
-      const b = h(`<button type="button" role="tab" aria-selected="${i === 0}" style="--tabc:${LANG_COLOR[l]}">${l === 'js' ? 'JavaScript' : l.toUpperCase()}</button>`);
+      const b = h(`<button type="button" role="tab" aria-selected="${i === 0}" style="--tabc:${LANG_COLOR[l]}">${LANG_LABEL(l)}</button>`);
       tabs.appendChild(b);
       const box = h('<div style="height:100%;' + (i ? 'display:none' : '') + '"></div>'); eds.appendChild(box);
       const ed = h('<div style="min-height:' + (opts.height || 420) + 'px;height:100%"></div>'); box.appendChild(ed);
@@ -70,8 +72,9 @@
     });
     const iframe = $('iframe', wrap), con = $('.console', wrap);
     const values = () => { const v = Object.assign({ html: '', css: '', js: '' }, opts.fixed || {}); langs.forEach(l => v[l] = editors[l].get()); return v; };
-    const runIt = () => U.run(values(), iframe, con);
-    $('[data-act=run]', wrap).addEventListener('click', runIt);
+    let runIt = () => U.run(values(), iframe, con);
+    if (isPhp) runIt = phpPanel(host, wrap, cfg, values);
+    $('[data-act=run]', wrap).addEventListener('click', () => runIt());
     $('[data-act=layout]', wrap).addEventListener('click', () => {
       if (mode === 'js') return;
       const on = !wrap.classList.contains('stack');
@@ -88,10 +91,78 @@
     };
     fullBtn.addEventListener('click', () => setFull(!wrap.classList.contains('lab-full')));
     wrap.addEventListener('keydown', e => { if (e.key === 'Escape' && wrap.classList.contains('lab-full')) { e.stopPropagation(); setFull(false); fullBtn.focus(); } });
-    wrap.addEventListener('run', runIt);
-    $('[data-act=reset]', wrap).addEventListener('click', () => { langs.forEach(l => editors[l].set(initial[l])); runIt(); });
+    wrap.addEventListener('run', () => runIt());
+    $('[data-act=reset]', wrap).addEventListener('click', () => { langs.forEach(l => editors[l].set(initial[l])); runIt(true); });
     if (opts.autorun !== false) runIt();
-    return { values, editors, run: runIt, iframe, con, set: v => langs.forEach(l => v[l] !== undefined && editors[l].set(v[l])) };
+    return { values, editors, run: () => runIt(), iframe, con, set: v => langs.forEach(l => v[l] !== undefined && editors[l].set(v[l])) };
+  }
+
+  /* PHP result panel: a fake request bar, the rendered page, the raw output and a log of what the "server" did.
+     Returns run(fresh): send the request in the bar; fresh = start as a new visitor (no cookies, no session). */
+  function phpPanel(host, wrap, cfg, values) {
+    const iframe = $('iframe', wrap), con = $('.console', wrap), panel = iframe.closest('.panel');
+    iframe.setAttribute('sandbox', 'allow-scripts allow-forms');
+    con.style.maxHeight = '190px';
+    const r0 = Object.assign({ query: '', body: '', ip: '' }, cfg.req || {});
+    r0.method = (r0.method || (r0.body ? 'POST' : 'GET')).toUpperCase();
+    const bar = h(`<div class="reqbar" dir="ltr">
+      <select data-f="method" aria-label="HTTP method"><option>GET</option><option>POST</option></select>
+      <label class="grow"><span>index.php?</span><input data-f="query" spellcheck="false" autocapitalize="off" placeholder="name=Ali&amp;age=20"></label>
+      <label class="grow" data-w="body"><span>POST</span><input data-f="body" spellcheck="false" autocapitalize="off" placeholder="email=a@b.com"></label>
+      <label data-w="ip"><span>IP</span><input data-f="ip" spellcheck="false" size="13"></label>
+      <button class="btn small ghost" data-act="visitor" type="button" title="${esc(t('phpNewVisitorTip'))}">${t('phpNewVisitor')}</button></div>`);
+    panel.insertBefore(bar, $('.preview', wrap));
+    const raw = h(`<details class="rawout"><summary>${t('phpRaw')}</summary><pre class="code" data-lang="html"><code></code></pre></details>`);
+    panel.insertBefore(raw, con);
+    const f = k => $('[data-f=' + k + ']', bar);
+    const setBar = r => { f('method').value = r.method; f('query').value = r.query || ''; f('body').value = r.body || ''; f('ip').value = r.ip || ''; sync(); };
+    const sync = () => { $('[data-w=body]', bar).hidden = f('method').value !== 'POST'; $('[data-w=ip]', bar).hidden = !r0.ip; };
+    f('method').addEventListener('change', sync);
+    bar.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); send(false); } });
+    setBar(r0);
+    if (cfg.db || cfg.files) {
+      const info = h('<details class="model phpinfo"><summary>' + t('phpFiles') + '</summary></details>');
+      Object.entries(cfg.files || {}).forEach(([n, c]) => info.insertAdjacentHTML('beforeend', '<p class="small muted" dir="ltr">' + esc(n) + '</p>' + U.codeBlock('php', c)));
+      if (cfg.db) info.insertAdjacentHTML('beforeend', '<p class="small muted">' + t('phpDb', cfg.db.name, cfg.db.user || 'root', cfg.db.pass || '') + '</p>' + U.codeBlock('sql', cfg.db.sql.replace(/;\s*(?=\S)/g, ';\n')));
+      host.appendChild(info);
+    }
+    let visitor = PHPRUN.visitor(), seq = 0;
+    const line = (cls, msg) => { const d = document.createElement('div'); d.className = cls; d.textContent = (cls === 'error' ? '✖ ' : cls === 'warn' ? '⚠ ' : '› ') + msg; con.appendChild(d); };
+    const onMsg = e => {
+      if (!wrap.isConnected) { window.removeEventListener('message', onMsg); return; }
+      const d = e.data; if (!d || !d.__php || e.source !== iframe.contentWindow) return;
+      if (d.link) { line('log', t('phpLink', d.link)); return; }
+      setBar({ method: d.method, query: d.query, body: d.body, ip: f('ip').value }); send(false);
+    };
+    window.addEventListener('message', onMsg);
+    const DOC = '<!DOCTYPE html><style>body{font-family:system-ui,Segoe UI,sans-serif;margin:12px;color:#111}</style><script>(function(){function S(d){d.__php=1;parent.postMessage(d,"*")}' +
+      'document.addEventListener("submit",function(e){e.preventDefault();var f=e.target,fd;try{fd=new FormData(f,e.submitter)}catch(x){fd=new FormData(f)}var q=new URLSearchParams(fd).toString(),a=f.getAttribute("action")||"",i=a.indexOf("?"),m=(f.getAttribute("method")||"get").toUpperCase()==="POST"?"POST":"GET";S({method:m,query:m==="GET"?q:(i>-1?a.slice(i+1):""),body:m==="POST"?q:""})},true);' +
+      'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(!a)return;var h=a.getAttribute("href")||"";if(/^#/.test(h))return;e.preventDefault();var i=h.indexOf("?");S(i>-1?{method:"GET",query:h.slice(i+1),body:""}:{link:h})});})();<\/script>';
+    const when = ms => { const d = Math.round((ms - Date.now()) / 86400000); return d >= 1 ? t('phpDays', d) : t('phpSecs', Math.max(1, Math.round((ms - Date.now()) / 1000))); };
+    async function send(reseed) {
+      const my = ++seq;
+      const req = { method: f('method').value, query: f('query').value.replace(/^\?/, ''), body: f('method').value === 'POST' ? f('body').value : '', ip: f('ip').value || undefined };
+      if (!PHPRUN.loaded()) { con.innerHTML = ''; line('log', t('phpLoading')); }
+      let r;
+      try { r = await PHPRUN.send(values().php, req, visitor, { db: cfg.db, files: cfg.files, reseed }); }
+      catch (e) { if (my === seq) { con.innerHTML = ''; line('error', t('phpLoadFail')); } return; }
+      if (my !== seq || !wrap.isConnected) return;
+      con.innerHTML = '';
+      line('log', '#' + visitor.n + '  ' + req.method + ' index.php' + (req.query ? '?' + req.query : '') + (req.body ? '   [' + (() => { try { return decodeURIComponent(req.body.replace(/\+/g, ' ')); } catch (e) { return req.body; } })() + ']' : ''));
+      r.errors.forEach(x => line(/Fatal|Parse/.test(x.level) ? 'error' : 'warn', x.level + (x.line ? ' (line ' + x.line + ')' : x.file ? ' (' + x.file + ')' : '') + ': ' + x.msg.split('\n')[0].replace(/&quot;/g, '"').replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&')));
+      if (r.died) line('alert', t('phpDied'));
+      if (r.status !== 200) line('log', 'HTTP status: ' + r.status);
+      if (r.redirect) line('alert', t('phpRedirect', r.redirect));
+      r.setCookies.forEach(c => line('alert', 'Set-Cookie: ' + c.name + '=' + c.value + '  (' + (c.deleted ? t('phpCookieGone') : c.expires ? when(c.expires) : t('phpCookieSession')) + (c.httponly ? ', HttpOnly' : '') + (c.secure ? ', Secure' : '') + ')'));
+      const jar = Object.entries(r.cookies);
+      if (jar.length) line('log', t('phpJar') + ' ' + jar.map(([k, v]) => k + '=' + (k === 'PHPSESSID' ? v.slice(0, 8) + '…' : v)).join('; '));
+      if (r.session) line('log', '$_SESSION: ' + JSON.stringify(r.session));
+      if (!r.html.trim()) line('log', t('phpEmpty'));
+      $('code', raw).innerHTML = U.hl('html', r.html);
+      iframe.srcdoc = DOC + r.html;
+    }
+    $('[data-act=visitor]', bar).addEventListener('click', () => { visitor = PHPRUN.visitor(); send(true); });
+    return fresh => { if (fresh) { visitor = PHPRUN.visitor(); setBar(r0); } return send(true); };
   }
 
   function quiz(host, qs, opts = {}) {
@@ -146,12 +217,12 @@
     let used = 0, tipShown = false;
     const solLines = () => {
       const list = [];
-      Object.entries(opts.solution()).forEach(([lang, code]) => code.split('\n').forEach(line => { if (line.trim() && !/^\s*(\/\/|\/\*|<!--)/.test(line)) list.push({ lang, line }); }));
+      Object.entries(opts.solution()).forEach(([lang, code]) => code.split('\n').forEach(line => { if (line.trim() && !/^\s*(\/\/|\/\*|<!--|#\s)/.test(line)) list.push({ lang, line }); }));
       return list;
     };
     const nextLine = () => {
       const v = L.values();
-      const have = {}; ['html', 'css', 'js'].forEach(l => { have[l] = new Set((v[l] || '').split('\n').map(x => x.trim()).filter(Boolean)); });
+      const have = {}; Object.keys(v).forEach(l => { have[l] = new Set((v[l] || '').split('\n').map(x => x.trim()).filter(Boolean)); });
       return solLines().find(x => !(have[x.lang] && have[x.lang].has(x.line.trim())));
     };
     $('[data-h=hint]', box).addEventListener('click', async () => {
@@ -194,6 +265,13 @@
     return { used: () => used };
   }
 
+  /* PHP challenge: a new visitor sends ch.requests in order; each check gets the list of results (html, text, doc, cookies, session, redirect…). */
+  async function gradePhp(ch, code) {
+    let rs = null;
+    try { rs = await PHPRUN.play(code, ch.requests || [{}], { db: ch.db, files: ch.files }); rs.forEach(r => { r.doc = new DOMParser().parseFromString(r.html, 'text/html'); }); } catch (e) { rs = null; }
+    return ch.checks.map(c => { let ok = false; try { ok = !!rs && !!c.t(rs, code); } catch (e) { ok = false; } return { d: c.d, ok }; });
+  }
+
   /* Challenge (auto-checked exercise) */
   let gradeFrame = null;
   const frame = () => gradeFrame || (gradeFrame = U.hiddenFrame());
@@ -205,12 +283,14 @@
     const tabs = ch.tabs || ['html'];
     const cfg = { mode: ch.mode };
     tabs.forEach(t => cfg[t] = (ch.starter || {})[t] || '');
+    if (ch.mode === 'php') Object.assign(cfg, { req: ch.req || (ch.requests || [])[0], db: ch.db, files: ch.files });
     const fixed = {};
     ['html', 'css', 'js'].forEach(t => { if (!tabs.includes(t) && ch.starter && ch.starter[t] !== undefined) fixed[t] = ch.starter[t]; });
     const L = lab($('.labhost', box), cfg, { tabs: tabs.slice(), fixed });
     const checksEl = $('.checks', box);
     const runChecks = async () => {
       const v = L.values();
+      if (ch.mode === 'php') return gradePhp(ch, v.php);
       const f = frame();
       const extra = ch.exports ? 'window.__exp={};' + ch.exports.map(n => 'try{window.__exp[' + JSON.stringify(n) + ']=' + n + '}catch(e){}').join(';') : 'window.__exp={};';
       await U.run(v, f, null, extra);
@@ -625,6 +705,77 @@
     </ul>`;
   }
 
+  /* Hidden test page for the PHP runner (#php-lab): not linked from the menus. */
+  function viewPhpLab() {
+    const db = { name: 'shop', user: 'root', pass: '', sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT, username TEXT, password TEXT); INSERT INTO users (email, username, password) VALUES ('ali@uob.edu.bh', 'ali', 'x'), ('sara@uob.edu.bh', 'sara', 'y');" };
+    const PRE = {
+      'Hello + form (GET)': { php: `<h1>Hello</h1>
+<form method="get">
+  <input name="name" placeholder="Your name">
+  <button type="submit">Send</button>
+</form>
+<?php
+if (isset($_GET['name'])) {
+  echo "<p>Welcome " . $_GET['name'] . "</p>";
+}
+?>`, req: { query: 'name=Nezar' } },
+      'Checkbox array (POST)': { php: `<form method="post">
+  <label><input type="checkbox" name="item[]" value="2.5#1"> Pen</label>
+  <label><input type="checkbox" name="item[]" value="1.35#2"> Book</label>
+  <button type="submit">Total</button>
+</form>
+<?php
+extract($_POST);
+if (isset($item)) {
+  $total = 0;
+  foreach ($item as $v) {
+    $parts = explode('#', $v);
+    $total += $parts[0];
+  }
+  echo "Total: $total";
+} else {
+  echo "Nothing selected";
+}
+?>`, req: { method: 'POST', body: 'item[]=2.5%231&item[]=1.35%232' } },
+      'PDO prepared statement (mysql: DSN)': { php: `<?php
+try {
+  $db = new PDO("mysql:host=localhost;dbname=shop", "root", "");
+  $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+  $stmt = $db->prepare("SELECT * FROM users WHERE email = :email");
+  $stmt->bindParam(':email', $_POST['email']);
+  $stmt->execute();
+  $user = $stmt->fetch();
+} catch (PDOException $e) {
+  die("Error: " . $e->getMessage());
+}
+?>
+<div class="welcome">Welcome <?= $user['username'] ?></div>`, req: { method: 'POST', body: 'email=sara@uob.edu.bh' }, db },
+      'Cookie + session (press Run again)': { php: `<?php
+session_start();
+if (!isset($_SESSION['visits'])) $_SESSION['visits'] = 0;
+$_SESSION['visits']++;
+if (isset($_COOKIE['lastvisit'])) echo "<p>Last visit: " . $_COOKIE['lastvisit'] . "</p>";
+else echo "<p>First visit</p>";
+setcookie('lastvisit', date('d/m/Y H:i:s'), time() + 3 * 7 * 24 * 60 * 60);
+echo "<p>Visits in this session: " . $_SESSION['visits'] . "</p>";
+?>` },
+      'IP filter, header and die': { php: `<?php
+$parts = explode('.', $_SERVER['REMOTE_ADDR']);
+if ($parts[0] != '10') {
+  header('Location: denied.php');
+  die('Access denied');
+}
+echo "Welcome, local user " . $_SERVER['REMOTE_ADDR'];
+?>`, req: { ip: '192.168.1.5' } }
+    };
+    const names = Object.keys(PRE);
+    app.innerHTML = `<h1>PHP lab</h1><p class="muted">Test page for the in-browser PHP runner (PHP ${PHPRUN.PIN.php}, ${PHPRUN.PIN.core}, PDO SQLite). The first run downloads the runtime.</p>
+      <div class="toolbar"><label for="plSel" class="small muted">Example</label><select id="plSel">${names.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join('')}</select></div><div id="pl"></div>`;
+    const show = i => { $('#pl').innerHTML = ''; lab($('#pl'), PRE[names[i]], { height: 380 }); };
+    $('#plSel').addEventListener('change', e => show(+e.target.value));
+    show(0);
+  }
+
   /* ---------- router ---------- */
   function route() {
     clearInterval(timerId);
@@ -640,6 +791,7 @@
     else if (hsh === 'practice-playground') viewPlayground();
     else if (hsh === 'exam') viewExam();
     else if (hsh === 'guide') viewGuide();
+    else if (hsh === 'php-lab') viewPhpLab();
     else viewHome();
     if (!hsh.startsWith('lesson-')) window.scrollTo({ top: 0 });
     app.focus({ preventScroll: true });
