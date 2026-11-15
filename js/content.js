@@ -12,7 +12,8 @@ const MODULES = [
   { id: 'php',      num: '09', ch: 'Ch 12', lang: 'php', title: 'PHP basics',              blurb: 'Syntax, arrays, foreach, functions, strings, preg_match, forms and $_SERVER.' },
   { id: 'db',       num: '10', ch: 'Ch 14', lang: 'db',  title: 'Databases & PDO',         blurb: 'SQL, connecting with PDO, query and fetch, exec, prepared statements, transactions.' },
   { id: 'state',    num: '11', ch: 'Ch 15', lang: 'php', title: 'Managing state',          blurb: 'Why HTTP forgets, cookies, sessions, and caching.' },
-  { id: 'security', num: '12', ch: 'Ch 16', lang: 'sec', title: 'Security',                blurb: 'XSS, SQL injection, session hijacking, password hashing, HTTPS and validation.' }
+  { id: 'security', num: '12', ch: 'Ch 16', lang: 'sec', title: 'Security',                blurb: 'XSS, SQL injection, session hijacking, password hashing, HTTPS and validation.' },
+  { id: 'bonus',    num: '13', ch: 'Wk 12–13', lang: 'bonus', title: 'Bonus: Node.js, React, Laravel', blurb: 'In the schedule but not in the chapter list: concepts only, may not be in the exam.' }
 ];
 
 const STEP_NAMES = ['Big Picture', 'Simple Explanation', 'Deeper Understanding', 'Important Points', 'Exam Focus', 'Common Mistakes', 'Mini Summary', 'Active Recall'];

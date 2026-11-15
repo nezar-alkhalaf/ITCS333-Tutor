@@ -29,7 +29,7 @@ const TRACKS = {
       /* cumulative (confirmed 2026-11-15): the midterm modules are included */
       scopeNote: { en: 'everything: HTML, CSS, JS, plus APIs and async JS, PHP, databases with PDO, state, security, how the web works', ar: 'كل شي: HTML و CSS و JS، وفوقها الـ APIs والـ async JS، و PHP، وقواعد البيانات بـ PDO، والـ state، والـ security، وشلون يشتغل الـ web' },
       chapters: { en: 'chapters 1 to 5, 7 to 10, 12 and 14 to 16', ar: 'الفصول 1 لين 5، و 7 لين 10، و 12، و 14 لين 16' },
-      modules: ['web', 'html', 'forms', 'css', 'layout', 'js', 'dom', 'events', 'async', 'php', 'db', 'state', 'security'],
+      modules: ['web', 'html', 'forms', 'css', 'layout', 'js', 'dom', 'events', 'async', 'php', 'db', 'state', 'security', 'bonus'],
       exams: ['final', 'midterm'] },
     { id: 'all',
       label: { en: 'Full course', ar: 'المادة كاملة' },

@@ -148,7 +148,8 @@ const I18N = (() => {
     php: { title: 'أساسيات الـ PHP', blurb: 'الـ syntax، والـ arrays، والـ foreach، والـ functions، والـ strings، والـ preg_match، والـ forms، والـ $_SERVER.' },
     db: { title: 'قواعد البيانات والـ PDO', blurb: 'الـ SQL، والاتصال بـ PDO، والـ query والـ fetch، والـ exec، والـ prepared statements، والـ transactions.' },
     state: { title: 'إدارة الـ state', blurb: 'ليش الـ HTTP ينسى، والـ cookies، والـ sessions، والـ caching.' },
-    security: { title: 'الـ Security', blurb: 'الـ XSS، والـ SQL injection، والـ session hijacking، والـ password hashing، والـ HTTPS، والـ validation.' }
+    security: { title: 'الـ Security', blurb: 'الـ XSS، والـ SQL injection، والـ session hijacking، والـ password hashing، والـ HTTPS، والـ validation.' },
+    bonus: { title: 'إضافي: الـ Node.js والـ React والـ Laravel', blurb: 'موجودين في الجدول بس مو في قائمة الفصول: مفاهيم بس، وممكن ما تجي في الامتحان.' }
   };
   const STEPS_AR = ['Big Picture · الصورة الكبيرة', 'Simple Explanation · شرح مبسّط', 'Deeper Understanding · فهم أعمق', 'Important Points · نقاط مهمة', 'Exam Focus · تركيز الامتحان', 'Common Mistakes · أغلاط شائعة', 'Mini Summary · ملخص سريع', 'Active Recall · استرجاع نشط'];
 

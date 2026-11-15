@@ -20,6 +20,7 @@
   --c-db: #0E8A8A;
   --c-sec: #B5364A;
   --c-web: #5B6F86;
+  --c-bonus: #9A6A00;
   --code-bg: #0F1722;
   --code-ink: #DCE6F2;
   --font-display: "Bricolage Grotesque", "Readex Pro", "Segoe UI", system-ui, sans-serif;
@@ -36,7 +37,7 @@
     --bg: #0B1118; --surface: #121B26; --ink: #E5ECF4; --muted: #92A2B4; --line: #233140;
     --accent: #7E97FF; --accent-soft: #1C2647; --good: #3CCB8E; --good-soft: #10291F;
     --bad: #FF7A6E; --bad-soft: #351816; --warn: #F2C04D; --warn-soft: #2E2611;
-    --c-html: #FF7A52; --c-css: #5EA2FF; --c-js: #F2C94C; --c-php: #A994F0; --c-db: #45C4C4; --c-sec: #FF8496; --c-web: #9FB2C8; --code-bg: #070C12; --code-ink: #DCE6F2;
+    --c-html: #FF7A52; --c-css: #5EA2FF; --c-js: #F2C94C; --c-php: #A994F0; --c-db: #45C4C4; --c-sec: #FF8496; --c-web: #9FB2C8; --c-bonus: #F2C04D; --code-bg: #070C12; --code-ink: #DCE6F2;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.3);
     color-scheme: dark;
   }
@@ -45,7 +46,7 @@
   --bg: #0B1118; --surface: #121B26; --ink: #E5ECF4; --muted: #92A2B4; --line: #233140;
   --accent: #7E97FF; --accent-soft: #1C2647; --good: #3CCB8E; --good-soft: #10291F;
   --bad: #FF7A6E; --bad-soft: #351816; --warn: #F2C04D; --warn-soft: #2E2611;
-  --c-html: #FF7A52; --c-css: #5EA2FF; --c-js: #F2C94C; --c-php: #A994F0; --c-db: #45C4C4; --c-sec: #FF8496; --c-web: #9FB2C8; --code-bg: #070C12; --code-ink: #DCE6F2;
+  --c-html: #FF7A52; --c-css: #5EA2FF; --c-js: #F2C94C; --c-php: #A994F0; --c-db: #45C4C4; --c-sec: #FF8496; --c-web: #9FB2C8; --c-bonus: #F2C04D; --code-bg: #070C12; --code-ink: #DCE6F2;
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.3);
   color-scheme: dark;
 }
@@ -114,6 +115,7 @@ ul.clean { list-style: none; padding: 0; margin: 0; }
 .chip.db { color: var(--c-db); border-color: color-mix(in srgb, var(--c-db) 40%, transparent); }
 .chip.sec { color: var(--c-sec); border-color: color-mix(in srgb, var(--c-sec) 40%, transparent); }
 .chip.web { color: var(--c-web); border-color: color-mix(in srgb, var(--c-web) 45%, transparent); }
+.chip.bonus { color: var(--c-bonus); border-color: color-mix(in srgb, var(--c-bonus) 45%, transparent); }
 .chip.done { color: var(--good); background: var(--good-soft); border-color: transparent; }
 
 /* Home */

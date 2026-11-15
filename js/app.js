@@ -5,7 +5,7 @@
   const md = U.md, esc = U.esc;
   const h = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const moduleOf = id => MODULES.find(m => m.id === id);
-  const LANG_COLOR = { html: 'var(--c-html)', css: 'var(--c-css)', js: 'var(--c-js)', php: 'var(--c-php)', db: 'var(--c-db)', sec: 'var(--c-sec)', web: 'var(--c-web)' };
+  const LANG_COLOR = { html: 'var(--c-html)', css: 'var(--c-css)', js: 'var(--c-js)', php: 'var(--c-php)', db: 'var(--c-db)', sec: 'var(--c-sec)', web: 'var(--c-web)', bonus: 'var(--c-bonus)' };
   const LANG_LABEL = l => l === 'js' ? 'JavaScript' : l.toUpperCase();
   /* chapter tags: taken from the module unless a lesson or question sets its own */
   LESSONS.forEach(l => { if (!l.chapter) l.chapter = (moduleOf(l.module) || {}).ch; });
