@@ -185,7 +185,7 @@ Spike this first (step 1). Pick the option that meets all of the following:
 6. **Module 12, Ch 16 (security).**
    - Lessons: XSS and `htmlspecialchars`; SQL injection, shown with a vulnerable query vs a prepared statement, run in the SQLite sandbox only; session hijacking and the `session.cookie_httponly` / `secure` settings; password hashing (`password_hash` / `password_verify`); HTTPS concepts; input validation on the client vs the server.
    - Keep the demos defensive and inside the sandbox.
-7. **Theory page, Ch 1–2.**
+7. **Theory page, Ch 1–2.** (Done as module 00, two lessons: `web-basics`, `web-http`. The "read an HTTP request" exercise is the `web-http` challenge; the MCQs go into the step 8 bank.)
    - About 25 MCQs plus a "read an HTTP request" exercise: method, path, host, query string, Content-Type, Content-Length.
 8. **Question bank + short answers.**
    - At least 25 MCQs per new module (Arabic too).
