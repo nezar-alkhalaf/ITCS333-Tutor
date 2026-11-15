@@ -428,3 +428,14 @@ details.phpinfo { margin: -6px 0 16px; }
 .simpler-box { margin-top: 12px; padding: 14px 18px 4px; border: 1px dashed var(--good); background: var(--good-soft); border-radius: 10px; }
 .simpler-box .s-title { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--good); margin-bottom: 6px; }
 [dir="rtl"] .simpler-box .s-title { letter-spacing: 0; }
+
+/* Short answers */
+.sa .sa-input { width: 100%; font: 1rem/1.6 var(--font-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; resize: vertical; margin: 10px 0; }
+[dir="rtl"] .sa .sa-input { font-family: var(--font-ar); }
+.sa-out:not(:empty) { display: grid; gap: 12px; margin-top: 12px; }
+.sa-model { border: 1px dashed var(--good); background: var(--good-soft); border-radius: 10px; padding: 12px 16px 2px; }
+.sa-points { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; display: grid; gap: 8px; }
+.sa-points .switch { color: var(--ink); align-items: flex-start; }
+.sa-points .switch input { margin-top: 4px; flex: none; }
+.sa .s-title, .sa-points .s-title { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--good); margin-bottom: 6px; }
+.sa-points .s-title { color: var(--accent); }

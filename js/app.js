@@ -528,9 +528,9 @@ $user = $stmt->fetch();
   }
 
   /* ----- Practice ----- */
-  const PTABS = [['practice', 'ptQuiz'], ['practice-puzzles', 'ptPuz'], ['practice-exam', 'ptRand'], ['practice-challenges', 'ptChal'], ['practice-playground', 'ptPlay']];
+  const PTABS = [['practice', 'ptQuiz'], ['practice-short', 'ptShort'], ['practice-puzzles', 'ptPuz'], ['practice-exam', 'ptRand'], ['practice-challenges', 'ptChal'], ['practice-playground', 'ptPlay']];
   /* a practice tab is offered when the current track has what it needs (it still opens by direct link) */
-  const PTAB_OK = { 'practice-puzzles': T => TRACKS.hasModule(T, PUZZLE_MODULE), 'practice-exam': T => EXAMS.some(e => e.random && TRACKS.hasExam(T, e.id)) };
+  const PTAB_OK = { 'practice-short': T => SHORT.some(x => TRACKS.hasModule(T, x.m)), 'practice-puzzles': T => TRACKS.hasModule(T, PUZZLE_MODULE), 'practice-exam': T => EXAMS.some(e => e.random && TRACKS.hasExam(T, e.id)) };
   function practiceShell(active) {
     const T = track(), tabs = PTABS.filter(([k]) => k === active || !PTAB_OK[k] || PTAB_OK[k](T));
     app.innerHTML = `<h1>${t('practiceH')}</h1><div class="toolbar"><div class="seg" role="group" aria-label="Practice type">${tabs.map(([k, n]) => `<button type="button" aria-pressed="${k === active}" data-k="${k}">${t(n)}</button>`).join('')}</div></div><div id="pbody"></div>`;
@@ -556,6 +556,43 @@ $user = $stmt->fetch();
       quiz(qh, set, { score: true, number: true, onDone: (r, tt) => qh.appendChild(h(`<div class="done-banner"><span>${t('scored', r, tt)}</span><button class="btn" type="button">${t('another')}</button></div>`)).querySelector('button').addEventListener('click', go) });
     };
     $('#pgo').addEventListener('click', go); go();
+  }
+
+  /* Short answers: write, then compare with the model answer and tick the key points covered */
+  function viewShort() {
+    const host = practiceShell('practice-short'), T = track();
+    const items = SHORT.filter(x => TRACKS.hasModule(T, x.m));
+    if (!items.length) { host.innerHTML = '<div class="note">' + t('noShort') + '</div>'; return; }
+    const mods = MODULES.filter(m => items.some(x => x.m === m.id));
+    host.innerHTML = `<p class="muted" style="max-width:75ch">${t('shortLead')}</p><div class="toolbar"><label for="sm" class="small muted">${t('topic')}</label><select id="sm"><option value="all">${t('allTopics')}</option>${mods.map(m => `<option value="${m.id}">${m.num} · ${esc(I18N.modTitle(m))}</option>`).join('')}</select></div><div id="shost"></div>`;
+    const show = () => {
+      const mod = $('#sm').value, sh = $('#shost'); sh.innerHTML = '';
+      items.filter(x => mod === 'all' || x.m === mod).forEach((x0, i) => {
+        const x = I18N.isAr() && x0.ar ? Object.assign({}, x0, x0.ar) : x0;
+        const marks = U.store.get('short', {}), drafts = U.store.get('shortDraft', {});
+        const card = h(`<div class="q sa"><div class="prompt">${i + 1}. ${strip(x.q)} <span class="chip ${(moduleOf(x.m) || {}).lang || ''}">${(moduleOf(x.m) || {}).ch || ''}</span></div>
+          <textarea class="sa-input" rows="6" placeholder="${esc(t('shortPlaceholder'))}" aria-label="${esc(t('shortPlaceholder'))}"></textarea>
+          <div class="row"><button class="btn primary" type="button" aria-expanded="false">${t('shortCompare')}</button><span class="score-pill" ${marks[x.id] === undefined ? 'hidden' : ''}>${marks[x.id] === undefined ? '' : t('shortScore', marks[x.id], x.points.length)}</span></div><div class="sa-out"></div></div>`);
+        const ta = $('textarea', card), btn = $('button', card), out = $('.sa-out', card), pill = $('.score-pill', card);
+        ta.value = drafts[x.id] || '';
+        ta.addEventListener('input', () => { const d = U.store.get('shortDraft', {}); d[x.id] = ta.value; U.store.set('shortDraft', d); });
+        btn.addEventListener('click', () => {
+          const open = btn.getAttribute('aria-expanded') === 'true';
+          btn.setAttribute('aria-expanded', String(!open)); btn.textContent = t(open ? 'shortCompare' : 'shortHide');
+          if (open) { out.innerHTML = ''; return; }
+          const ticked = U.store.get('shortTicks', {})[x.id] || [];
+          out.innerHTML = `<div class="sa-model"><div class="s-title">${t('shortModel')}</div>${md(x.model)}</div><div class="sa-points"><div class="s-title">${t('shortPoints')}</div>${x.points.map((p, j) => `<label class="switch"><input type="checkbox" data-j="${j}" ${ticked.includes(j) ? 'checked' : ''}> <span>${strip(p)}</span></label>`).join('')}</div>`;
+          out.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => {
+            const js = [...out.querySelectorAll('input:checked')].map(c => +c.dataset.j);
+            const tk = U.store.get('shortTicks', {}); tk[x.id] = js; U.store.set('shortTicks', tk);
+            const mk = U.store.get('short', {}); mk[x.id] = js.length; U.store.set('short', mk);
+            pill.hidden = false; pill.textContent = t('shortScore', js.length, x.points.length);
+          }));
+        });
+        sh.appendChild(card);
+      });
+    };
+    $('#sm').addEventListener('change', show); show();
   }
 
   /* Specificity: compute and explain */
@@ -878,6 +915,7 @@ echo "Welcome, local user " . $_SERVER['REMOTE_ADDR'];
     else if (hsh === 'learn') viewLearn();
     else if (hsh === 'practice') viewPractice();
     else if (hsh === 'practice-puzzles') viewPuzzles();
+    else if (hsh === 'practice-short') viewShort();
     else if (hsh === 'practice-exam') viewRandomQ();
     else if (hsh === 'practice-challenges') viewChallenges();
     else if (hsh === 'practice-playground') viewPlayground();
