@@ -36,6 +36,12 @@ final class SandboxPDO extends PDO {
 }
 final class SandboxExit extends Error {}
 function __wdl_exit($status = '') { if (is_string($status)) echo $status; SandboxPDO::$died = true; throw new SandboxExit(); }
+function __wdl_is_uploaded($f) { return is_string($f) && strpos($f, '/tmp/uploads/') === 0 && is_file($f); }
+function __wdl_move_uploaded($from, $to) {
+  if (!__wdl_is_uploaded($from)) return false;
+  if (!is_dir(dirname($to))) { trigger_error("move_uploaded_file($to): Failed to open stream: No such file or directory", E_USER_WARNING); return false; }
+  return rename($from, $to);
+}
 (function () {
   $r = json_decode(file_get_contents('/www/__req.json'), true);
   SandboxPDO::$cfg = $r['db'];
@@ -45,6 +51,9 @@ function __wdl_exit($status = '') { if (is_string($status)) echo $status; Sandbo
   $_COOKIE = $r['cookies'];
   $_REQUEST = array_merge($_GET, $_POST);
   $_FILES = [];
+  foreach (($r['files'] ?? []) as $field => $f) {
+    $_FILES[$field] = ['name' => $f['name'], 'full_path' => $f['name'], 'type' => $f['type'], 'tmp_name' => $f['tmp_name'], 'error' => $f['error'], 'size' => $f['size']];
+  }
   $_SERVER['REQUEST_METHOD'] = $r['method'];
   $_SERVER['REMOTE_ADDR'] = $r['ip'];
   $_SERVER['QUERY_STRING'] = $r['query'];
@@ -56,7 +65,7 @@ function __wdl_exit($status = '') { if (is_string($status)) echo $status; Sandbo
   $_SERVER['SERVER_NAME'] = 'localhost';
   $_SERVER['HTTP_USER_AGENT'] = 'ITCS333-Tutor sandbox';
   $_SERVER['REQUEST_TIME'] = time();
-  if ($r['method'] === 'POST') $_SERVER['CONTENT_TYPE'] = 'application/x-www-form-urlencoded';
+  if ($r['method'] === 'POST') $_SERVER['CONTENT_TYPE'] = $_FILES ? 'multipart/form-data' : 'application/x-www-form-urlencoded';
 })();
 register_shutdown_function(function () {
   $body = '';
@@ -76,7 +85,10 @@ set_include_path('/www');
       php.addEventListener('output', e => { buf += e.detail.join(''); });
       php.addEventListener('error', e => { buf += e.detail.join(''); });
       FS = (await php.binary).FS;
-      ['/www', '/tmp', '/tmp/db'].forEach(d => { if (!FS.analyzePath(d).exists) FS.mkdir(d); });
+      ['/www', '/www/uploads', '/tmp', '/tmp/db', '/tmp/uploads'].forEach(d => { if (!FS.analyzePath(d).exists) FS.mkdir(d); });
+      /* scripts run with the folder "/" as the working folder (changing it breaks loading the SQLite driver),
+         so a relative "uploads/x.jpg" is linked to the site's own uploads folder */
+      if (!FS.analyzePath('/uploads').exists) FS.symlink('/www/uploads', '/uploads');
       FS.writeFile('/www/__boot.php', BOOT);
     })().catch(e => { booting = null; throw e; });
     return booting;
@@ -99,6 +111,8 @@ set_include_path('/www');
         exit would also skip the code that reports cookies and headers back to the page. */
   const rewrite = src => U.phpScan(src).map(p => p.t !== 'code' ? p.s : p.s
     .replace(/\bnew\s+\\?PDO\s*\(/gi, 'new SandboxPDO(')
+    .replace(/\bmove_uploaded_file\s*\(/gi, '__wdl_move_uploaded(')
+    .replace(/\bis_uploaded_file\s*\(/gi, '__wdl_is_uploaded(')
     .replace(/(?<![\w$>:\\])(?:die|exit)\b(\s*\()?/gi, (m, par) => par ? '__wdl_exit(' : '__wdl_exit()')).join('');
   const rm = p => { try { FS.unlink(p); } catch (e) { /* not there */ } };
 
@@ -107,6 +121,7 @@ set_include_path('/www');
   }
   async function seed(db) {
     clearDir('/tmp/db');
+    clearDir('/www/uploads');
     if (!db) return '';
     return raw('<?php try { $d = new PDO(' + phpStr('sqlite:/tmp/db/' + db.name + '.sqlite') + '); $d->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $d->exec(' + phpStr(db.sql) + '); } catch (Exception $e) { echo "SEED ERROR: ", $e->getMessage(); }');
   }
@@ -136,7 +151,20 @@ set_include_path('/www');
     const cookies = {};
     Object.values(visitor.jar).forEach(c => { if (!c.expires || c.expires > Date.now()) cookies[c.name] = c.value; });
     Object.assign(cookies, req.cookies || {});
-    FS.writeFile('/www/__req.json', JSON.stringify({
+    /* uploaded files: {field: {name, type, size?, content? (text) | data? (base64), error?}} → temp files + $_FILES */
+    clearDir('/tmp/uploads');
+    const files = {};
+    Object.entries(req.files || {}).forEach(([field, f], i) => {
+      const error = f.error || 0;
+      let bytes = new Uint8Array(0), tmp = '';
+      if (!error) {
+        bytes = f.data ? Uint8Array.from(atob(f.data), c => c.charCodeAt(0)) : new TextEncoder().encode(f.content || '');
+        tmp = '/tmp/uploads/php' + (Date.now() % 100000) + i;
+        FS.writeFile(tmp, bytes);
+      }
+      files[field] = { name: f.name || '', type: f.type || '', size: f.size !== undefined ? f.size : bytes.length, tmp_name: tmp, error };
+    });
+    FS.writeFile('/www/__req.json', JSON.stringify({ files,
       method: (req.method || (req.body ? 'POST' : 'GET')).toUpperCase(), query: req.query || '', body: req.body || '',
       ip: req.ip || '127.0.0.1', cookies: Object.keys(cookies).length ? cookies : {}, db: o.db ? { name: o.db.name, user: o.db.user, pass: o.db.pass } : null
     }));

@@ -172,16 +172,21 @@
       if (!wrap.isConnected) { window.removeEventListener('message', onMsg); return; }
       const d = e.data; if (!d || !d.__php || e.source !== iframe.contentWindow) return;
       if (d.link) { line('log', t('phpLink', d.link)); return; }
-      setBar({ method: d.method, query: d.query, body: d.body, ip: f('ip').value }); send(false);
+      setBar({ method: d.method, query: d.query, body: d.body, ip: f('ip').value }); send(false, d.files);
     };
     window.addEventListener('message', onMsg);
     const DOC = '<!DOCTYPE html><style>body{font-family:system-ui,Segoe UI,sans-serif;margin:12px;color:#111}</style><script>(function(){function S(d){d.__php=1;parent.postMessage(d,"*")}' +
-      'document.addEventListener("submit",function(e){e.preventDefault();var f=e.target,fd;try{fd=new FormData(f,e.submitter)}catch(x){fd=new FormData(f)}var q=new URLSearchParams(fd).toString(),a=f.getAttribute("action")||"",i=a.indexOf("?"),m=(f.getAttribute("method")||"get").toUpperCase()==="POST"?"POST":"GET";S({method:m,query:m==="GET"?q:(i>-1?a.slice(i+1):""),body:m==="POST"?q:""})},true);' +
+      'document.addEventListener("submit",function(e){e.preventDefault();var f=e.target,fd;try{fd=new FormData(f,e.submitter)}catch(x){fd=new FormData(f)}' +
+      /* file inputs: sent as files only with method="post" and enctype="multipart/form-data", like a real browser */
+      'var p=new URLSearchParams(),files={},wait=[],m=(f.getAttribute("method")||"get").toUpperCase()==="POST"?"POST":"GET",multi=m==="POST"&&(f.getAttribute("enctype")||"").toLowerCase()==="multipart/form-data";' +
+      'fd.forEach(function(v,k){if(typeof v==="string"){p.append(k,v)}else if(multi){if(v.name){wait.push(new Promise(function(res){var r=new FileReader();r.onload=function(){files[k]={name:v.name,type:v.type||"application/octet-stream",size:v.size,data:String(r.result).split(",")[1]||""};res()};r.readAsDataURL(v)}))}else{files[k]={name:"",type:"",size:0,error:4}}}else{p.append(k,v.name||"")}});' +
+      'Promise.all(wait).then(function(){var q=p.toString(),a=f.getAttribute("action")||"",i=a.indexOf("?");S({method:m,query:m==="GET"?q:(i>-1?a.slice(i+1):""),body:m==="POST"?q:"",files:multi?files:null})})},true);' +
       'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(!a)return;var h=a.getAttribute("href")||"";if(/^#/.test(h))return;e.preventDefault();var i=h.indexOf("?");S(i>-1?{method:"GET",query:h.slice(i+1),body:""}:{link:h})});})();<\/script>';
     const when = ms => { const d = Math.round((ms - Date.now()) / 86400000); return d >= 1 ? t('phpDays', d) : t('phpSecs', Math.max(1, Math.round((ms - Date.now()) / 1000))); };
-    async function send(reseed) {
+    async function send(reseed, files) {
       const my = ++seq;
       const req = { method: f('method').value, query: f('query').value.replace(/^\?/, ''), body: f('method').value === 'POST' ? f('body').value : '', ip: f('ip').value || undefined };
+      if (req.method === 'POST') req.files = files || (reseed ? r0.files : undefined);
       if (!PHPRUN.loaded()) { con.innerHTML = ''; line('log', t('phpLoading')); }
       let r;
       try { r = await PHPRUN.send(values().php, req, visitor, { db: cfg.db, files: cfg.files, reseed }); }
@@ -189,6 +194,7 @@
       if (my !== seq || !wrap.isConnected) return;
       con.innerHTML = '';
       line('log', '#' + visitor.n + '  ' + req.method + ' index.php' + (req.query ? '?' + req.query : '') + (req.body ? '   [' + (() => { try { return decodeURIComponent(req.body.replace(/\+/g, ' ')); } catch (e) { return req.body; } })() + ']' : ''));
+      Object.entries(req.files || {}).forEach(([k, x]) => line('log', '   file ' + k + ': ' + (x.error ? '(no file, error ' + x.error + ')' : x.name + ', ' + (x.type || '?') + ', ' + (x.size !== undefined ? x.size : (x.content || '').length) + ' bytes')));
       r.errors.forEach(x => line(/Fatal|Parse/.test(x.level) ? 'error' : 'warn', x.level + (x.line ? ' (line ' + x.line + ')' : x.file ? ' (' + x.file + ')' : '') + ': ' + x.msg.split('\n')[0].replace(/&quot;/g, '"').replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&')));
       if (r.died) line('alert', t('phpDied'));
       if (r.status !== 200) line('log', 'HTTP status: ' + r.status);

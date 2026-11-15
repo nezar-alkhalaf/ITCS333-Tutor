@@ -103,7 +103,8 @@ Spike this first (step 1). Pick the option that meets all of the following:
   - `new PDO("mysql:host=...;dbname=X", user, pass)` is routed to a SQLite file seeded from the exercise's `db: {name, user, pass, sql}`. A wrong database name or password throws a `PDOException` like MySQL would. Seed SQL must be SQLite-compatible.
   - `die()` / `exit` are rewritten to a sandbox function, so cookies and headers can still be reported.
   - Each request runs from scratch (`php.refresh()`), so nothing leaks between requests except cookies, sessions and the database.
-- **Limits:** no real file uploads (`move_uploaded_file` cannot work, so pattern 9 is a read-the-code lesson); an infinite loop freezes the tab, like in the JS labs; SQL is SQLite's dialect.
+- **File uploads:** a request can carry `files: {field: {name, type, size, content | data, error}}`; a file chosen in the preview form is sent too (only with `enctype="multipart/form-data"`, like a real browser). `move_uploaded_file` / `is_uploaded_file` are rewritten to sandbox versions; relative `uploads/…` maps to the site's uploads folder (scripts run with `/` as the working folder, because changing folder breaks loading the SQLite driver).
+- **Limits:** an infinite loop freezes the tab, like in the JS labs; SQL is SQLite's dialect.
 - **UI:** `lab()` has a `php` mode: request bar (method, query string, POST body, IP), rendered page, raw HTML, and a log (errors, `Set-Cookie`, `Location`, `die`, the cookie jar, `$_SESSION`). Submitting a form inside the preview sends the next request.
 - **Challenges:** `challenge: { mode: 'php', tabs: ['php'], requests: [...], db?, files?, checks: [{d, t(results, src)}] }`.
 
