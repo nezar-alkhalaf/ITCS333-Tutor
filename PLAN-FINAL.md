@@ -190,7 +190,7 @@ Spike this first (step 1). Pick the option that meets all of the following:
 8. **Question bank + short answers.**
    - At least 25 MCQs per new module (Arabic too).
    - A new **short-answer** type: the student writes an answer, then compares it with a model answer and a checklist of key points to tick themselves.
-9. **Mock Final.**
+9. **Mock Final.** (Done: `js/exam-final.js`, 43 marks in 90 minutes: Q1 13, Q2 10, Q3 10, Q4 10 self-marked; 4 + 3 + 2 code scenarios.)
    - Same engine as the mock midterm (`exam.js`), with new parts: PHP arrays/regex, PDO prepared statement, session/cookie output, and short answers. Several scenarios each.
    - Marking is line by line with the same point style (1 pt per required line).
    - Run every model answer and confirm full marks.

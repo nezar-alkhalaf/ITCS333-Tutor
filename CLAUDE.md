@@ -44,6 +44,10 @@ It is hosted on **GitHub Pages** from the `main` branch root. There is no server
 | `js/questions.js` (+ `questions-ar.js`) | `QUESTIONS` and `PUZZLES`, aligned 1:1 with `QUESTIONS_AR` |
 | `js/questions2.js` | Extra questions, each carrying its own `ar` field |
 | `js/exam.js` | `SCENARIOS` and `EXAM.PARTS` (spec, model, grade) for the mock midterm |
+| `js/exam-final.js` | `FINAL`: mock final parts (Q1 arrays/regex, Q2 PDO, Q3 state, Q4 short answers), scenarios, line-by-line PHP marking, `selfTest` |
+| `js/questions3.js`, `questions4.js` | Final-part MCQs (web, async, php, db, state, security), each with its own `ar` |
+| `js/shortanswers.js` | `SHORT`: short-answer questions with model answers and key points (EN + AR) |
+| `js/content4.js` … `content9.js` (+ `content-ar4` … `ar9`) | Final-part modules: async, php, db, state, security, web |
 | `js/php-runner.js` | `PHPRUN`: PHP 8.4 in the browser (php-wasm + PDO SQLite, lazy, pinned). Fake requests, cookies, sessions, `mysql:` DSN mapped to SQLite. See the decision in `PLAN-FINAL.md` section 2 |
 | `js/app.js` | Hash router (`#home`, `#learn`, `#lesson-<id>`, `#practice*`, `#exam`, `#guide`, hidden `#php-lab`) and views: `lab()` (web, js and php modes), `quiz()`, `helpPanel()`, `challenge()` |
 
@@ -72,7 +76,7 @@ The Arabic entry `LESSONS_AR[id]` mirrors this shape:
 - Serve with `python3 -m http.server 8765`, then run a headless browser (Playwright) to:
   - open every route in **both** languages with no console errors;
   - run every challenge's model solution and confirm all checks pass;
-  - confirm every mock-exam model answer gets full marks and an empty answer gets 0.
+  - confirm every mock-exam model answer gets full marks and an empty answer gets 0 (midterm `EXAM` and final `FINAL.selfTest`).
 - Check that every `QUESTIONS[i]` has a matching `QUESTIONS_AR[i]`, and every lesson's Arabic `deeper` has the same length as the English one.
 
 ## Working style (Karpathy guidelines)

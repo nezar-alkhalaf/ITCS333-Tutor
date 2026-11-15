@@ -726,7 +726,7 @@ $user = $stmt->fetch();
   /* ----- Mock exam ----- */
   let timerId = null;
   /* Mock exams. id matches "exams" in js/tracks.js. view(head) draws the start page; random(host) draws one random question. */
-  const EXAMS = [{ id: 'midterm', name: () => t('mockH'), view: viewMidterm, random: randomMidterm }];
+  const EXAMS = [{ id: 'final', name: () => t('mockFinalH'), view: viewFinal, random: randomFinal }, { id: 'midterm', name: () => t('mockH'), view: viewMidterm, random: randomMidterm }];
   function viewExam() {
     clearInterval(timerId);
     const list = EXAMS.filter(e => TRACKS.hasExam(track(), e.id));
@@ -806,6 +806,139 @@ $user = $stmt->fetch();
       setTimeout(() => { if (btn.isConnected) { delete btn.dataset.confirm; btn.textContent = t('submit'); } }, 3000);
     });
     show();
+  }
+
+  /* ----- Mock final (js/exam-final.js) ----- */
+  const finalScenario = (part, st) => part.scenarios[st.sc[part.id]];
+  function finalSpec(part, s) {
+    return `<div class="spec" dir="ltr" lang="en">${I18N.isAr() ? '<div class="note" dir="rtl" lang="ar">' + t('examEnglish') + '</div>' : ''}${md(part.spec(s).replace(/^(\d+)\. /gm, '- **$1.** '))}<p class="small muted" ${I18N.isAr() ? 'dir="rtl" lang="ar"' : ''}>${t('noAuto')}</p></div>`;
+  }
+  function finalLab(host, part, s, value, onInput) {
+    return lab(host, { php: value, db: part.db ? part.db(s) : undefined, req: part.requests(s)[0] }, { height: 480, onInput });
+  }
+  const shortOf = id => { const x0 = SHORT.find(x => x.id === id); return I18N.isAr() && x0.ar ? Object.assign({}, x0, x0.ar) : x0; };
+  const finalTotal = () => FINAL.PARTS.reduce((a, p) => a + p.marks, 0);
+  function viewFinal(head) {
+    const draft = U.store.get('finalDraft', null), hist = U.store.get('finalExams', []);
+    const cols = FINAL.PARTS.map(p => p.id.toUpperCase());
+    app.innerHTML = `${head}<h1>${t('mockFinalH')}</h1>
+      <p class="muted" style="max-width:70ch">${t('mockFinalLead', finalTotal())}</p>
+      <div class="card" style="max-width:720px"><div class="toolbar" style="margin:0">
+        <label class="switch"><input type="checkbox" id="ftimed" checked> ${t('timer90')}</label>
+        <button class="btn primary" id="fstart" type="button">${t('startExam')}</button>
+        ${draft ? '<button class="btn" id="fresume" type="button">' + t('resume') + '</button>' : ''}
+      </div></div>
+      ${hist.length ? `<h2 style="margin-top:30px">${t('attempts')}</h2><table class="history"><thead><tr><th>${t('thDate')}</th>${cols.map(c => `<th>${c}</th>`).join('')}<th>${t('thTotal')}</th></tr></thead><tbody>${hist.slice(-10).reverse().map(x => `<tr><td>${esc(new Date(x.date).toLocaleString())}</td>${x.p.map((v, i) => `<td>${v}/${FINAL.PARTS[i].marks}</td>`).join('')}<td><strong>${x.p.reduce((a, b) => a + b, 0)}/${finalTotal()}</strong></td></tr>`).join('')}</tbody></table>` : ''}`;
+    $('#fstart').addEventListener('click', () => {
+      const seed = 1 + Math.floor(Math.random() * 100000), sc = {}, ans = {};
+      FINAL.PARTS.forEach((p, i) => {
+        if (p.kind === 'php') { sc[p.id] = (seed + i * 7) % p.scenarios.length; ans[p.id] = p.starter(p.scenarios[sc[p.id]]).php; }
+        else { sc[p.id] = FINAL.shortIds(seed); ans[p.id] = {}; }
+      });
+      const st = { seed, sc, timed: $('#ftimed').checked, start: Date.now(), part: 0, ans };
+      U.store.set('finalDraft', st); finalRun(st);
+    });
+    if (draft) $('#fresume').addEventListener('click', () => finalRun(draft));
+  }
+  function finalRun(st) {
+    const save = () => U.store.set('finalDraft', st);
+    app.innerHTML = `<div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">${t('mockFinalH')}</h2>
+      <div class="row">${st.timed ? '<span class="timer" id="timer" aria-live="off">90:00</span>' : ''}<button class="btn primary" id="submitExam" type="button">${t('submit')}</button></div></div>
+      <div class="toolbar"><div class="seg" role="group" aria-label="Question">${FINAL.PARTS.map((p, i) => `<button type="button" data-p="${i}" aria-pressed="${i === st.part}">${p.title} · ${p.marks}</button>`).join('')}</div></div><div id="ex"></div>`;
+    const ex = $('#ex');
+    const show = () => {
+      app.querySelectorAll('[data-p]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.p === st.part));
+      const part = FINAL.PARTS[st.part];
+      if (part.kind === 'php') {
+        const s = finalScenario(part, st);
+        ex.innerHTML = `<div class="exam-grid">${finalSpec(part, s)}<div id="ed"></div></div>`;
+        finalLab($('#ed'), part, s, st.ans[part.id], v => { st.ans[part.id] = v; save(); });
+      } else {
+        ex.innerHTML = `<div class="spec" style="position:static;max-height:none;margin-bottom:16px"><strong>${part.title}</strong> (${part.marks}) <p class="muted small" style="margin:6px 0 0">${t('q4Lead')}</p></div><div id="sas"></div>`;
+        st.sc[part.id].forEach((id, i) => {
+          const x = shortOf(id);
+          const card = h(`<div class="q sa"><div class="prompt">${i + 1}. ${strip(x.q)} <span class="chip">${x.points.length}</span></div><textarea class="sa-input" rows="8" aria-label="${esc(t('shortPlaceholder'))}" placeholder="${esc(t('shortPlaceholder'))}"></textarea></div>`);
+          const ta = $('textarea', card); ta.value = st.ans[part.id][id] || '';
+          ta.addEventListener('input', () => { st.ans[part.id][id] = ta.value; save(); });
+          $('#sas').appendChild(card);
+        });
+      }
+    };
+    app.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => { st.part = +b.dataset.p; save(); show(); }));
+    if (st.timed) {
+      const tick = () => {
+        const left = Math.max(0, 5400 - Math.floor((Date.now() - st.start) / 1000));
+        const el = $('#timer'); if (!el) { clearInterval(timerId); return; }
+        el.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
+        el.classList.toggle('low', left < 600);
+        if (left === 0) { clearInterval(timerId); finish(); }
+      };
+      clearInterval(timerId); timerId = setInterval(tick, 1000); tick();
+    }
+    let finishing = false;
+    const finish = async () => {
+      if (finishing) return; finishing = true; clearInterval(timerId);
+      app.innerHTML = '<h2>' + t('markingExam') + '</h2><p class="muted">' + t('markingLead') + '</p>';
+      const blocks = [], scores = [];
+      for (const part of FINAL.PARTS) {
+        if (part.kind !== 'php') { scores.push(0); continue; }
+        const s = finalScenario(part, st), items = await FINAL.grade(part, s, st.ans[part.id]);
+        const r = resultBlock(part, s, items); blocks.push(r.el); scores.push(r.got);
+      }
+      const hist = U.store.get('finalExams', []); hist.push({ date: Date.now(), p: scores }); U.store.set('finalExams', hist);
+      const idx = hist.length - 1;
+      U.store.set('finalDraft', null);
+      const mins = Math.round((Date.now() - st.start) / 60000);
+      app.innerHTML = `<div class="result-head"><div class="big-score"><span id="fscore"></span><small> / ${finalTotal()}</small></div><div><h2 style="margin:0">${t('mockFinalH')}</h2><p class="muted" style="margin:0" id="fparts"></p></div>
+        <div class="row" style="margin-inline-start:auto"><a class="btn primary" href="#exam">${t('newAttempt')}</a><a class="btn" href="#practice-exam">${t('practiseSingle')}</a></div></div>
+        <div class="note">${t('reviewNote')}</div><div id="blocks"></div>`;
+      const paint = () => {
+        $('#fscore').textContent = scores.reduce((a, b) => a + b, 0);
+        $('#fparts').textContent = FINAL.PARTS.map((p, i) => p.id.toUpperCase() + ' ' + scores[i] + '/' + p.marks).join(' · ') + ' · ' + mins + ' ' + t('min');
+        const hs = U.store.get('finalExams', []); if (hs[idx]) { hs[idx].p = scores.slice(); U.store.set('finalExams', hs); }
+      };
+      blocks.forEach(b => $('#blocks').appendChild(b));
+      /* Q4: the student marks their own answers against the key points */
+      const q4 = FINAL.PARTS.findIndex(p => p.kind === 'short'), part = FINAL.PARTS[q4];
+      const box = h(`<div class="card" style="margin-bottom:18px"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${part.title}</h3><span class="score-pill" id="q4pill">0 / ${part.marks}</span></div><p class="muted small">${t('q4Mark')}</p></div>`);
+      const ticks = {};
+      st.sc[part.id].forEach(id => {
+        const x = shortOf(id); ticks[id] = 0;
+        const per = part.marks / st.sc[part.id].length / x.points.length;
+        const it = h(`<div class="q sa"><div class="prompt">${strip(x.q)}</div><div class="sa-model" style="background:var(--bg);border-color:var(--line)"><div class="s-title" style="color:var(--muted)">${t('yourAnswer')}</div><p style="white-space:pre-wrap">${esc(st.ans[part.id][id] || '—')}</p></div><div class="sa-out" style="margin-top:12px"><div class="sa-model"><div class="s-title">${t('shortModel')}</div>${md(x.model)}</div><div class="sa-points"><div class="s-title">${t('shortPoints')}</div>${x.points.map((p, j) => `<label class="switch"><input type="checkbox" data-j="${j}"> <span>${strip(p)}</span></label>`).join('')}</div></div></div>`);
+        it.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+          ticks[id] = it.querySelectorAll('input:checked').length;
+          const got = Object.entries(ticks).reduce((a, [k, n]) => a + n * (part.marks / st.sc[part.id].length / shortOf(k).points.length), 0);
+          scores[q4] = Math.round(got * 2) / 2; $('#q4pill').textContent = scores[q4] + ' / ' + part.marks; paint();
+        }));
+        box.appendChild(it);
+        void per;
+      });
+      $('#blocks').appendChild(box);
+      paint();
+    };
+    $('#submitExam').addEventListener('click', () => {
+      const btn = $('#submitExam');
+      if (btn.dataset.confirm) return finish();
+      btn.dataset.confirm = '1'; btn.textContent = t('clickAgain');
+      setTimeout(() => { if (btn.isConnected) { delete btn.dataset.confirm; btn.textContent = t('submit'); } }, 3000);
+    });
+    show();
+  }
+  /* one random code question from the mock final, marked on demand */
+  function randomFinal(host) {
+    const parts = FINAL.PARTS.filter(p => p.kind === 'php');
+    const part = parts[Math.floor(Math.random() * parts.length)], s = part.scenarios[Math.floor(Math.random() * part.scenarios.length)];
+    host.innerHTML = `<div class="toolbar"><span class="chip">${t('mockFinalH')}</span><span class="chip">${part.title}</span><button class="btn" id="another" type="button">${t('anotherQ')}</button></div>
+      <div class="exam-grid">${finalSpec(part, s)}<div><div id="ed"></div><div class="row"><button class="btn primary" id="grade" type="button">${t('mark')}</button></div><div id="helphost" style="margin-top:12px"></div><div id="res" style="margin-top:14px"></div></div></div>`;
+    $('#another').addEventListener('click', viewRandomQ);
+    const E = finalLab($('#ed'), part, s, part.starter(s).php);
+    helpPanel($('#helphost'), E, { solution: () => part.model(s), tip: async () => { const it = await FINAL.grade(part, s, E.values().php); const miss = it.find(i => !i.ok); return miss ? miss.d : null; } });
+    $('#grade').addEventListener('click', async () => {
+      $('#res').innerHTML = '<p class="muted">' + t('marking') + '</p>';
+      const items = await FINAL.grade(part, s, E.values().php);
+      $('#res').innerHTML = ''; $('#res').appendChild(resultBlock(part, s, items).el);
+    });
   }
 
   function viewGuide() {
@@ -929,5 +1062,10 @@ echo "Welcome, local user " . $_SERVER['REMOTE_ADDR'];
   let lessonKeys = null;
   document.addEventListener('keydown', e => { if (lessonKeys) lessonKeys(e); });
   window.addEventListener('hashchange', route);
+  /* a link to the page you are on (e.g. "New attempt" on the exam result page) re-renders it */
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (a && a.getAttribute('href') === (location.hash || '#home') && !e.defaultPrevented) { e.preventDefault(); route(); }
+  });
   route();
 })();
