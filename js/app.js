@@ -360,7 +360,7 @@
     const last = U.store.get('last', null), lastL0 = ls.find(l => l.id === last), lastL = lastL0 && I18N.lesson(lastL0);
     const hasExam = EXAMS.some(e => TRACKS.hasExam(T, e.id));
     const hasQ = QUESTIONS.filter(q => TRACKS.hasModule(T, q.m)).length;
-    const server = S.modules.some(m => m.lang === 'php') && !S.modules.some(m => m.lang === 'html');
+    const server = S.modules.some(m => m.id === 'php');   /* the code sample follows the track: PHP once the server part is in scope */
     const sample = server ? U.hl('php', `<?php
 $stmt = $db->prepare("SELECT * FROM users WHERE email = :email");
 $stmt->bindParam(':email', $_POST['email']);

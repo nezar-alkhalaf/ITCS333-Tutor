@@ -195,7 +195,7 @@ Spike this first (step 1). Pick the option that meets all of the following:
    - Same engine as the mock midterm (`exam.js`), with new parts: PHP arrays/regex, PDO prepared statement, session/cookie output, and short answers. Several scenarios each.
    - Marking is line by line with the same point style (1 pt per required line).
    - Run every model answer and confirm full marks.
-10. **Home and navigation** (most of this is done in step 0b).
+10. **Home and navigation** (done: per-track home with countdown, progress, code sample and footer chapters; README updated).
     - Final polish of the home page for each track.
     - Update the footer chapters.
 
