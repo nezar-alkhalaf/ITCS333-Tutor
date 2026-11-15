@@ -441,3 +441,9 @@ details.phpinfo { margin: -6px 0 16px; }
 .sa-points .switch input { margin-top: 4px; flex: none; }
 .sa .s-title, .sa-points .s-title { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--good); margin-bottom: 6px; }
 .sa-points .s-title { color: var(--accent); }
+
+/* Theme switch animation: a circle reveal (view transitions), or a short colour fade where not supported */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+#themeBtn svg { transition: transform .55s cubic-bezier(.4, 0, .2, 1); }
+html.theme-fade, html.theme-fade * { transition: background-color .35s ease, color .35s ease, border-color .35s ease !important; }
+@media (prefers-reduced-motion: reduce) { #themeBtn svg { transition: none; } }
