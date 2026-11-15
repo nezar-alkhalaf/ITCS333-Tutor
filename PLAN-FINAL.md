@@ -19,8 +19,9 @@ Source: the course specification (2026-27), section 26.
 
 **Excluded:** Ch 17 and Ch 18 (the spec says "not part of the exam material").
 
+**Decided:** the final **is cumulative** (Nezar, 15 Nov 2026). The `final` track in `js/tracks.js` lists the midterm modules too, and offers the mock midterm next to the mock final.
+
 **Unknown, ask Nezar before building:**
-- Is the final cumulative (does it include HTML/CSS/JS again)?
 - Are Node.js, React and Laravel (weekly schedule, weeks 12–13) examinable? They are in the schedule but not in the chapter list.
 
 **Regex** (`preg_match`) appears in the 2024-25 papers by this course's staff, so treat it as **in scope for PHP**. The JS regex lesson stays marked "Bonus".
