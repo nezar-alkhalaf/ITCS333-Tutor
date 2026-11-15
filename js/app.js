@@ -830,7 +830,7 @@ $user = $stmt->fetch();
     app.innerHTML = `${head}<h1>${t('mockFinalH')}</h1>
       <p class="muted" style="max-width:70ch">${t('mockFinalLead', finalTotal())}</p>
       <div class="card" style="max-width:720px"><div class="toolbar" style="margin:0">
-        <label class="switch"><input type="checkbox" id="ftimed" checked> ${t('timer90')}</label>
+        <label class="switch"><input type="checkbox" id="ftimed" checked> ${t('timer120')}</label>
         <button class="btn primary" id="fstart" type="button">${t('startExam')}</button>
         ${draft ? '<button class="btn" id="fresume" type="button">' + t('resume') + '</button>' : ''}
       </div></div>
@@ -849,7 +849,7 @@ $user = $stmt->fetch();
   function finalRun(st) {
     const save = () => U.store.set('finalDraft', st);
     app.innerHTML = `<div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">${t('mockFinalH')}</h2>
-      <div class="row">${st.timed ? '<span class="timer" id="timer" aria-live="off">90:00</span>' : ''}<button class="btn primary" id="submitExam" type="button">${t('submit')}</button></div></div>
+      <div class="row">${st.timed ? '<span class="timer" id="timer" aria-live="off">120:00</span>' : ''}<button class="btn primary" id="submitExam" type="button">${t('submit')}</button></div></div>
       <div class="toolbar"><div class="seg" role="group" aria-label="Question">${FINAL.PARTS.map((p, i) => `<button type="button" data-p="${i}" aria-pressed="${i === st.part}">${p.title} · ${p.marks}</button>`).join('')}</div></div><div id="ex"></div>`;
     const ex = $('#ex');
     const show = () => {
@@ -873,7 +873,7 @@ $user = $stmt->fetch();
     app.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => { st.part = +b.dataset.p; save(); show(); }));
     if (st.timed) {
       const tick = () => {
-        const left = Math.max(0, 5400 - Math.floor((Date.now() - st.start) / 1000));
+        const left = Math.max(0, 7200 - Math.floor((Date.now() - st.start) / 1000));
         const el = $('#timer'); if (!el) { clearInterval(timerId); return; }
         el.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
         el.classList.toggle('low', left < 600);
