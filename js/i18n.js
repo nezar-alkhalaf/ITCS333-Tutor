@@ -3,12 +3,18 @@ const I18N = (() => {
   let lang = U.store.get('lang', 'en');
   const S = {
     en: {
-      navLearn: 'Learn', navPractice: 'Practice', navExam: 'Mock exam', navGuide: 'How to use', brandSub: 'Midterm: HTML · CSS · JS',
-      footer: 'Built for ITCS333 Internet Software Development (University of Bahrain). Content follows Connolly & Hoar, Fundamentals of Web Development 3rd ed., chapters 3, 4, 5, 7, 8 and 9 (up to events). Progress is saved in this browser only.',
-      heroChip: 'ITCS333 · Midterm: HTML + CSS + JS (till events)', heroTitle: 'Learn web development by writing it.',
-      heroLead: 'Twenty-eight short lessons from your first HTML tag to building table rows with JavaScript events. Every lesson ends with code you write and the site checks for you, then a mock midterm marked line by line like the real paper.',
-      continue: 'Continue: ', start1: 'Start lesson 1', takeMock: 'Take a mock midterm', lessonsDone: (a, b) => `${a} of ${b} lessons done`,
-      qLearnT: 'Learn', qLearnD: '7 modules, 28 lessons, each in 8 steps: Big Picture to Active Recall.',
+      navLearn: 'Learn', navPractice: 'Practice', navExam: 'Mock exam', navGuide: 'How to use',
+      footer: c => `Built for ITCS333 Internet Software Development (University of Bahrain). Content follows Connolly & Hoar, Fundamentals of Web Development 3rd ed., ${c}. Progress is saved in this browser only.`,
+      heroTitle: 'Learn web development by writing it.',
+      heroLead: (n, note, exam) => `${n} short lessons: ${note}. Every lesson ends with code you write and the site checks for you${exam ? ', then a mock exam marked line by line like the real paper' : ''}.`,
+      trackLabel: 'What are you studying for?', trackEmpty: 'The lessons for this part are not on the site yet. Choose another track at the top.',
+      daysTo: (d, n) => `${d === 1 ? 'day' : 'days'} to the ${n}`, examWas: (n, w) => `The ${n} exam was on ${w}.`,
+      notInTrack: (cur, own) => `This lesson is not in the ${cur} scope${own ? ': it is part of the ' + own : ''}.`, switchTo: n => `Switch to ${n}`,
+      noExam: 'There is no mock exam for this track yet. Choose another track at the top.', noQsTrack: 'No questions for this track yet.',
+      lastLessonNoExam: 'That was the last lesson of this track.', backToLessons: 'Back to the lessons',
+      guideScope: (n, note, ch) => `You are on the <strong>${n}</strong> track: ${note} (${ch}).`,
+      continue: 'Continue: ', start1: 'Start lesson 1', takeMock: 'Take a mock exam', lessonsDone: (a, b) => `${a} of ${b} lessons done`,
+      qLearnT: 'Learn', qLearnD: (m, n) => `${m} modules, ${n} lessons, each in 8 steps: Big Picture to Active Recall.`,
       qPracT: 'Practice questions', qPracD: n => `${n} MCQs with explanations, many modelled on past ITCS333 exams.`,
       qPuzT: 'Specificity puzzles', qPuzD: '"Which colour wins?" questions like the 2024-25 midterm, explained rule by rule.',
       qRandT: 'Random exam question', qRandD: 'One question from a mock paper, auto-marked with the real mark split.',
@@ -20,7 +26,7 @@ const I18N = (() => {
       stepOf: (a, n) => `Step ${a} of 8 · ${n}`, back: '← Back', next: 'Next →', mockArrow: 'Mock exam →',
       tryIt: 'Try it.', examFocusLead: 'How this topic appeared in real ITCS333 exams.', wrong: 'Wrong', right: 'Right',
       recallLead: 'Answer from memory first. Then write the code yourself.', codingChallenge: 'Coding challenge',
-      nextLessonBanner: t => 'Next lesson: ' + t, lastLesson: 'That was the last lesson. Time for the mock midterm.', goNext: 'Go to next lesson →', startMock: 'Start mock midterm →',
+      nextLessonBanner: t => 'Next lesson: ' + t, lastLesson: 'That was the last lesson. Time for a mock exam.', goNext: 'Go to next lesson →', startMock: 'Start a mock exam →',
       reset: 'Reset', run: '▶ Run', result: 'Result', console: 'Console', consoleEmpty: 'Console output appears here',
       check: 'Check my answer', showModel: 'Show model answer', hideModel: 'Hide model answer', checking: 'Checking…', allPassed: 'All checks passed. Challenge complete.',
       correct: 'Correct.', notQuite: 'Not quite.',
@@ -44,15 +50,37 @@ const I18N = (() => {
       hint: 'Hint', hintNext: 'Next step:', hintAllPass: 'Everything already passes. Press Check my answer.', hintLine: 'Next line from the model answer', addLine: 'Add this line to my code',
       lineAdded: 'Added to your code at the cursor. Press Run or Check to see the effect.', hintNoMore: 'Your code already has every line of the model answer. Press Check to see what is still wrong.', hintsUsed: n => `Hints used: ${n}`,
       mcqHint: 'Hint: remove a wrong answer', ptPlay: 'Playground', playLead: 'Free space to write and run your own HTML, CSS and JavaScript. Saved automatically in this browser.', playClear: 'Clear all',
-      hideMenu: 'Hide menu', showMenu: 'Show menu', menu: 'Menu', hideShort: 'Hide', resizeMenu: 'Drag to change the menu width (double-click to reset)', fullTip: 'Full screen: editor and result fill the whole screen (Esc to exit)', exitFull: 'Exit full screen (Esc)', layoutTip: 'Switch layout: code beside the result, or code on top with the result below'
+      hideMenu: 'Hide menu', showMenu: 'Show menu', menu: 'Menu', hideShort: 'Hide', resizeMenu: 'Drag to change the menu width (double-click to reset)', fullTip: 'Full screen: editor and result fill the whole screen (Esc to exit)', exitFull: 'Exit full screen (Esc)', layoutTip: 'Switch layout: code beside the result, or code on top with the result below',
+      mockFinalH: 'Mock final', timer90: '90-minute timer',
+      mockFinalLead: n => `Four parts, ${n} marks: <strong>Q1</strong> PHP arrays and preg_match, <strong>Q2</strong> a PDO prepared statement, <strong>Q3</strong> cookies and sessions over several requests, <strong>Q4</strong> two short answers. The code parts run in real PHP and are marked line by line; you mark Q4 yourself against the key points. Each attempt picks different scenarios. This paper is modelled on the course's past patterns, not on an official format.`,
+      q4Lead: 'Write both answers as you would on paper. After you submit, you will compare them with the model answers and tick the key points you covered.',
+      q4Mark: 'Compare each answer with the model answer and tick the key points it really covers. The score updates as you tick.', yourAnswer: 'Your answer',
+      ptShort: 'Short answers', noShort: 'No short-answer questions for this track yet.',
+      shortLead: 'Write your answer first, as you would on paper. Then compare it with the model answer and tick the key points you covered: the examiner gives marks for these points. Your answers are saved in this browser.',
+      shortPlaceholder: 'Write your answer here…', shortCompare: 'Compare with the model answer', shortHide: 'Hide the model answer',
+      shortModel: 'Model answer', shortPoints: 'Tick the key points your answer covers', shortScore: (n, k) => `${n} / ${k} points`,
+      simplerShow: 'Simpler explanation', simplerHide: 'Hide the simpler explanation', simplerTitle: 'In simpler words',
+      phpLoading: 'Loading PHP… (a few MB, the first time only)', phpLoadFail: 'Could not load the PHP runtime. Check your internet connection and press Run again.',
+      phpNewVisitor: 'New visitor', phpNewVisitorTip: 'Start again as a new visitor: no cookies, no session, fresh database',
+      phpRaw: 'Show the HTML that the script sent', phpFiles: 'Files and database on this server',
+      phpDb: (n, u, p) => `Database "${n}" (user "${u}", password "${p}"). The exam form new PDO("mysql:host=localhost;dbname=${n}", ...) works here: the sandbox answers it with these tables. They are reset on every Run.`,
+      phpLink: h => `(link to ${h}: only this one page exists in the sandbox)`, phpDied: 'die() / exit stopped the script here',
+      phpRedirect: u => `header Location: the browser would now go to ${u}`, phpCookieGone: 'deleted', phpCookieSession: 'until the browser closes',
+      phpDays: d => `expires in ${d} day${d === 1 ? '' : 's'}`, phpSecs: s => `expires in ${s} s`, phpJar: 'Cookies in the browser now:', phpEmpty: '(the script printed nothing)'
     },
     ar: {
-      navLearn: 'الدروس', navPractice: 'تدريب', navExam: 'امتحان تجريبي', navGuide: 'طريقة الاستخدام', brandSub: 'الميد: HTML · CSS · JS',
-      footer: 'مسوّى لمادة ITCS333 Internet Software Development (جامعة البحرين). المحتوى من كتاب Connolly & Hoar، Fundamentals of Web Development الطبعة الثالثة، الفصول 3 و 4 و 5 و 7 و 8 و 9 (لين الـ events). تقدمك ينحفظ في هالـ browser بس.',
-      heroChip: 'ITCS333 · الميد: HTML + CSS + JS (لين الـ events)', heroTitle: 'تعلّم الـ web development وأنت تكتبه بيدك.',
-      heroLead: '28 درس قصير، من أول HTML tag لين ما تبني صفوف جدول بـ JavaScript events. كل درس ينتهي بكود تكتبه أنت والموقع يصححه لك، وبعدين امتحان تجريبي يتصحح سطر بسطر مثل الورقة الحقيقية.',
+      navLearn: 'الدروس', navPractice: 'تدريب', navExam: 'امتحان تجريبي', navGuide: 'طريقة الاستخدام',
+      footer: c => `مسوّى لمادة ITCS333 Internet Software Development (جامعة البحرين). المحتوى من كتاب Connolly & Hoar، Fundamentals of Web Development الطبعة الثالثة، ${c}. تقدمك ينحفظ في هالـ browser بس.`,
+      heroTitle: 'تعلّم الـ web development وأنت تكتبه بيدك.',
+      heroLead: (n, note, exam) => `${n} درس قصير: ${note}. كل درس ينتهي بكود تكتبه أنت والموقع يصححه لك${exam ? '، وبعدين امتحان تجريبي يتصحح سطر بسطر مثل الورقة الحقيقية' : ''}.`,
+      trackLabel: 'حق شنو قاعد تذاكر؟', trackEmpty: 'دروس هالجزء للحين مو موجودة في الموقع. اختار مسار ثاني من فوق.',
+      daysTo: (d, n) => `يوم باقي على ${n}`, examWas: (n, w) => `امتحان ${n} كان ${w}.`,
+      notInTrack: (cur, own) => `هالدرس مو داخل في ${cur}${own ? '، هو من ضمن ' + own : ''}.`, switchTo: n => `حوّل على ${n}`,
+      noExam: 'ما في امتحان تجريبي لهالمسار للحين. اختار مسار ثاني من فوق.', noQsTrack: 'ما في أسئلة لهالمسار للحين.',
+      lastLessonNoExam: 'هذا كان آخر درس في هالمسار.', backToLessons: 'ارجع للدروس',
+      guideScope: (n, note, ch) => `أنت الحين على مسار <strong>${n}</strong>: ${note} (${ch}).`,
       continue: 'كمّل: ', start1: 'ابدأ الدرس الأول', takeMock: 'ادخل امتحان تجريبي', lessonsDone: (a, b) => `خلصت ${a} من ${b} درس`,
-      qLearnT: 'الدروس', qLearnD: '7 أقسام و 28 درس، وكل درس 8 خطوات: من Big Picture لين Active Recall.',
+      qLearnT: 'الدروس', qLearnD: (m, n) => `${m} أقسام و ${n} درس، وكل درس 8 خطوات: من Big Picture لين Active Recall.`,
       qPracT: 'أسئلة تدريب', qPracD: n => `${n} سؤال MCQ مع الشرح، وكثير منها على نمط امتحانات ITCS333 القديمة.`,
       qPuzT: 'ألغاز الـ Specificity', qPuzD: 'أسئلة "أي لون يفوز؟" مثل ميد 2024-25، ومشروحة rule بـ rule.',
       qRandT: 'سؤال امتحان عشوائي', qRandD: 'سؤال واحد من ورقة تجريبية، يتصحح تلقائي بنفس توزيع الدرجات الحقيقي.',
@@ -88,7 +116,23 @@ const I18N = (() => {
       hint: 'تلميح', hintNext: 'الخطوة الجاية:', hintAllPass: 'كل شي صح. اضغط "صحّح جوابي".', hintLine: 'السطر الجاي من الحل النموذجي', addLine: 'أضف هالسطر للكود حقي',
       lineAdded: 'انضاف للكود حقك مكان المؤشر. اضغط Run أو صحّح جوابي عشان تشوف النتيجة.', hintNoMore: 'الكود حقك فيه كل أسطر الحل النموذجي. اضغط "صحّح جوابي" عشان تشوف وش باقي غلط.', hintsUsed: n => `التلميحات المستخدمة: ${n}`,
       mcqHint: 'تلميح: شيل جواب غلط', ptPlay: 'ساحة الكود', playLead: 'مكان حر تكتب فيه HTML و CSS و JavaScript حقك وتشغّله. ينحفظ تلقائي في هالـ browser.', playClear: 'امسح الكل',
-      hideMenu: 'خبّي القائمة', showMenu: 'اعرض القائمة', menu: 'القائمة', hideShort: 'خبّي', resizeMenu: 'اسحب عشان تغيّر عرض القائمة (دبل كلك يرجعها للأصل)', fullTip: 'شاشة كاملة: المحرر والنتيجة ياخذون الشاشة كلها (Esc للخروج)', exitFull: 'اطلع من الشاشة الكاملة (Esc)', layoutTip: 'غيّر الترتيب: الكود جنب النتيجة، أو الكود فوق والنتيجة تحت'
+      hideMenu: 'خبّي القائمة', showMenu: 'اعرض القائمة', menu: 'القائمة', hideShort: 'خبّي', resizeMenu: 'اسحب عشان تغيّر عرض القائمة (دبل كلك يرجعها للأصل)', fullTip: 'شاشة كاملة: المحرر والنتيجة ياخذون الشاشة كلها (Esc للخروج)', exitFull: 'اطلع من الشاشة الكاملة (Esc)', layoutTip: 'غيّر الترتيب: الكود جنب النتيجة، أو الكود فوق والنتيجة تحت',
+      mockFinalH: 'امتحان فاينل تجريبي', timer90: 'مؤقت 90 دقيقة',
+      mockFinalLead: n => `أربعة أجزاء، ${n} درجة: <strong>Q1</strong> الـ arrays والـ preg_match في الـ PHP، و <strong>Q2</strong> prepared statement بالـ PDO، و <strong>Q3</strong> الـ cookies والـ sessions على كذا request، و <strong>Q4</strong> سؤالين مقاليين قصار. أجزاء الكود تشتغل بـ PHP حقيقي وتتصحح سطر بسطر، و Q4 تصححه أنت بنفسك على النقاط الأساسية. وكل محاولة تختار سيناريوهات مختلفة. وهالورقة مبنية على أنماط المادة السابقة، مو على شكل رسمي.`,
+      q4Lead: 'اكتب الجوابين مثل ما تكتبهم على الورقة. وبعد ما تسلّم، بتقارنهم بالأجوبة النموذجية وتصحّح على النقاط الأساسية اللي غطّيتها.',
+      q4Mark: 'قارن كل جواب بالجواب النموذجي وصحّح على النقاط الأساسية اللي فعلًا يغطيها. والدرجة تتحدّث وأنت تصحّح.', yourAnswer: 'جوابك',
+      ptShort: 'أسئلة مقالية قصيرة', noShort: 'ما في أسئلة مقالية لهالمسار للحين.',
+      shortLead: 'اكتب جوابك أول، مثل ما تكتبه على الورقة. وبعدين قارنه بالجواب النموذجي وصحّح على النقاط الأساسية اللي غطّيتها: المصحّح يعطي الدرجات على هالنقاط. وأجوبتك تنحفظ في هالـ browser.',
+      shortPlaceholder: 'اكتب جوابك هني…', shortCompare: 'قارن بالجواب النموذجي', shortHide: 'خبّي الجواب النموذجي',
+      shortModel: 'الجواب النموذجي', shortPoints: 'صحّح على النقاط الأساسية اللي غطّاها جوابك', shortScore: (n, k) => `${n} / ${k} نقاط`,
+      simplerShow: 'شرح أبسط', simplerHide: 'خبّي الشرح الأبسط', simplerTitle: 'بكلام أبسط',
+      phpLoading: 'قاعد أحمّل الـ PHP… (كم MB، أول مرة بس)', phpLoadFail: 'ما قدرت أحمّل الـ PHP runtime. تأكد من الإنترنت واضغط Run مرة ثانية.',
+      phpNewVisitor: 'زائر جديد', phpNewVisitorTip: 'ابدأ من جديد كزائر جديد: بدون cookies، بدون session، وقاعدة بيانات جديدة',
+      phpRaw: 'اعرض الـ HTML اللي طلّعه السكربت', phpFiles: 'الملفات وقاعدة البيانات اللي على هالـ server',
+      phpDb: (n, u, p) => `قاعدة البيانات "${n}" (الـ user "${u}" والـ password "${p}"). صيغة الامتحان new PDO("mysql:host=localhost;dbname=${n}", ...) تشتغل هني: الـ sandbox يرد عليها بهالجداول. وترجع لأصلها مع كل Run.`,
+      phpLink: h => `(رابط لـ ${h}: في الـ sandbox ما في إلا هالصفحة)`, phpDied: 'الـ die() / exit وقّف السكربت هني',
+      phpRedirect: u => `header Location: الـ browser الحين بيروح لـ ${u}`, phpCookieGone: 'انمسح', phpCookieSession: 'لين يتسكر الـ browser',
+      phpDays: d => `ينتهي بعد ${d} يوم`, phpSecs: s => `ينتهي بعد ${s} ثانية`, phpJar: 'الـ cookies اللي في الـ browser الحين:', phpEmpty: '(السكربت ما طبع شي)'
     }
   };
   const MOD_AR = {
@@ -98,7 +142,14 @@ const I18N = (() => {
     layout: { title: 'الـ CSS layout', blurb: 'الـ display، والـ positioning، والـ Flexbox، والـ media queries.' },
     js: { title: 'أساسيات الـ JavaScript', blurb: 'الـ variables، والـ types، والشروط، والـ loops، والـ functions، والـ objects، والـ arrays.' },
     dom: { title: 'الـ DOM', blurb: 'تختار العناصر، وتقراها وتغيّرها، وتنشئ عناصر جديدة مثل صفوف الجدول.' },
-    events: { title: 'الـ Events', blurb: 'الـ addEventListener، والـ event object، والـ forms، والـ preventDefault، والـ bubbling، والـ delegation.' }
+    events: { title: 'الـ Events', blurb: 'الـ addEventListener، والـ event object، والـ forms، والـ preventDefault، والـ bubbling، والـ delegation.' },
+    web: { title: 'شلون يشتغل الـ web', blurb: 'الـ client والـ server، والـ URL، والـ DNS، والـ HTTP request والـ response.' },
+    async: { title: 'الـ APIs والـ async JavaScript', blurb: 'الـ callbacks، والـ Promises، والـ fetch، والـ async/await، والـ JSON، وبناء جدول من بيانات جاية من API.' },
+    php: { title: 'أساسيات الـ PHP', blurb: 'الـ syntax، والـ arrays، والـ foreach، والـ functions، والـ strings، والـ preg_match، والـ forms، والـ $_SERVER.' },
+    db: { title: 'قواعد البيانات والـ PDO', blurb: 'الـ SQL، والاتصال بـ PDO، والـ query والـ fetch، والـ exec، والـ prepared statements، والـ transactions.' },
+    state: { title: 'إدارة الـ state', blurb: 'ليش الـ HTTP ينسى، والـ cookies، والـ sessions، والـ caching.' },
+    security: { title: 'الـ Security', blurb: 'الـ XSS، والـ SQL injection، والـ session hijacking، والـ password hashing، والـ HTTPS، والـ validation.' },
+    bonus: { title: 'إضافي: الـ Node.js والـ React والـ Laravel', blurb: 'موجودين في الجدول بس مو في قائمة الفصول: مفاهيم بس، وممكن ما تجي في الامتحان.' }
   };
   const STEPS_AR = ['Big Picture · الصورة الكبيرة', 'Simple Explanation · شرح مبسّط', 'Deeper Understanding · فهم أعمق', 'Important Points · نقاط مهمة', 'Exam Focus · تركيز الامتحان', 'Common Mistakes · أغلاط شائعة', 'Mini Summary · ملخص سريع', 'Active Recall · استرجاع نشط'];
 
@@ -121,7 +172,7 @@ const I18N = (() => {
     if (!A) return L;
     const out = Object.assign({}, L);
     if (A.title) out.title = A.title;
-    ['big', 'simple', 'points', 'exam', 'summary'].forEach(k => { if (A[k]) out[k] = A[k]; });
+    ['big', 'simple', 'simpler', 'points', 'exam', 'summary'].forEach(k => { if (A[k]) out[k] = A[k]; });
     if (A.deeper && A.deeper.length === L.deeper.length) {
       out.deeper = L.deeper.map((d, i) => {
         const x = A.deeper[i];
@@ -146,7 +197,7 @@ const I18N = (() => {
 })();
 
 const GUIDE_AR = `<h1>شلون تستخدم هالموقع</h1>
-<p class="muted">مسوّى لأي طالب في ITCS333. محتوى الميد هو <strong>HTML + CSS + JS (till events)</strong>: يعني الفصول 3 و 4 و 5 و 7 و 8، والفصل 9 لين الـ events.</p>
+<p class="muted">مسوّى لأي طالب في ITCS333. {{scope}}</p>
 <ol class="guide-steps">
   <li><h3>امشِ على الدروس بالترتيب</h3><p>كل درس فيه 8 خطوات: Big Picture، و Simple Explanation، و Deeper Understanding (مع editor حي)، و Important Points، و Exam Focus، و Common Mistakes، و Mini Summary، و Active Recall. لا تتخطى الـ editor: غيّر الكود واضغط Run.</p></li>
   <li><h3>خلّص كل تحدي كود</h3><p>آخر خطوة في كل درس فيها تحدي، والموقع يصححه سطر بسطر. إذا علقت، اكتب اللي تقدر عليه واضغط "صحّح جوابي"، واقرأ أي سطور ما نجحت قبل ما تفتح الحل النموذجي.</p></li>
@@ -160,4 +211,8 @@ const GUIDE_AR = `<h1>شلون تستخدم هالموقع</h1>
   <li>اضغط <kbd>Ctrl</kbd> + <kbd>Enter</kbd> داخل الـ editor عشان تشغّل الكود، و <kbd>Tab</kbd> يسوي مسافة (indent).</li>
   <li>زر English / عربي فوق يغيّر اللغة. في الوضع العربي، المصطلحات التقنية وأسئلة الامتحان تبقى بالإنجليزي، مثل الامتحان الحقيقي.</li>
   <li>المصدر: كتاب Connolly &amp; Hoar، <em>Fundamentals of Web Development</em> الطبعة الثالثة، وامتحانات ITCS333 السابقة.</li>
-</ul>`;
+</ul>
+<h2 style="margin-top:30px">الميد، أو الفاينل، أو المادة كاملة</h2>
+<p>الزر اللي فوق يحدد حق شنو قاعد تذاكر. يفلتر الدروس، والأسئلة، والتحديات، والامتحانات التجريبية، ويضبط العد التنازلي. تقدمك ينحفظ لكل درس بروحه، فلو غيّرت المسار ما يضيع شي. والدرس اللي مو في المسار اللي اخترته ينفتح عادي من الرابط المباشر، ومعاه ملاحظة تقول هو تابع لأي مسار.</p>
+<h3>شلون تغيّر الـ scope في الفصل الجاي</h3>
+<p>تقسيمة الميد والفاينل ممكن تتغير كل فصل. وهي مكتوبة في ملف واحد بس: <code>js/tracks.js</code>. لكل مسار، عدّل <code>modules</code> (أي أقسام داخلة)، و <code>examDate</code>، و <code>scopeNote</code>، و <code>chapters</code>. وإذا تبي تنقل درس واحد، أضف الـ id حقه في <code>lessons</code> (أو <code>'-id'</code> عشان تشيله). وإذا الفاينل شامل (cumulative)، أضف أقسام الميد لمسار الفاينل. وما يحتاج تغيّر أي شي ثاني في الموقع.</p>`;

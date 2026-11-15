@@ -1,12 +1,19 @@
 /* Lessons, part 1: HTML (Ch3), Tables & Forms (Ch5), CSS selectors, specificity, box model (Ch4). */
 const MODULES = [
+  { id: 'web',    num: '00', ch: 'Ch 1–2', lang: 'web', title: 'How the web works',     blurb: 'Client and server, URLs, DNS, and the HTTP request and response.' },
   { id: 'html',   num: '01', ch: 'Ch 3', lang: 'html', title: 'HTML foundations',        blurb: 'Page structure, the head, text, links, images, lists and semantic elements.' },
   { id: 'forms',  num: '02', ch: 'Ch 5', lang: 'html', title: 'Tables & forms',          blurb: 'thead/tbody, rowspan/colspan, inputs and their attributes, buttons.' },
   { id: 'css',    num: '03', ch: 'Ch 4', lang: 'css',  title: 'CSS selectors & styling', blurb: 'Selectors, combinators, specificity, the box model, units and colours.' },
   { id: 'layout', num: '04', ch: 'Ch 7', lang: 'css',  title: 'CSS layout',              blurb: 'Display, positioning, Flexbox and media queries.' },
   { id: 'js',     num: '05', ch: 'Ch 8', lang: 'js',   title: 'JavaScript fundamentals', blurb: 'Variables, types, conditions, loops, functions, objects and arrays.' },
   { id: 'dom',    num: '06', ch: 'Ch 9', lang: 'js',   title: 'The DOM',                 blurb: 'Select elements, read and change them, create new ones like table rows.' },
-  { id: 'events', num: '07', ch: 'Ch 9', lang: 'js',   title: 'Events',                  blurb: 'addEventListener, the event object, forms, preventDefault, bubbling and delegation.' }
+  { id: 'events', num: '07', ch: 'Ch 9', lang: 'js',   title: 'Events',                  blurb: 'addEventListener, the event object, forms, preventDefault, bubbling and delegation.' },
+  { id: 'async',    num: '08', ch: 'Ch 10', lang: 'js',  title: 'APIs & async JavaScript', blurb: 'Callbacks, Promises, fetch, async/await, JSON, and building a table from fetched data.' },
+  { id: 'php',      num: '09', ch: 'Ch 12', lang: 'php', title: 'PHP basics',              blurb: 'Syntax, arrays, foreach, functions, strings, preg_match, forms and $_SERVER.' },
+  { id: 'db',       num: '10', ch: 'Ch 14', lang: 'db',  title: 'Databases & PDO',         blurb: 'SQL, connecting with PDO, query and fetch, exec, prepared statements, transactions.' },
+  { id: 'state',    num: '11', ch: 'Ch 15', lang: 'php', title: 'Managing state',          blurb: 'Why HTTP forgets, cookies, sessions, and caching.' },
+  { id: 'security', num: '12', ch: 'Ch 16', lang: 'sec', title: 'Security',                blurb: 'XSS, SQL injection, session hijacking, password hashing, HTTPS and validation.' },
+  { id: 'bonus',    num: '13', ch: 'Wk 12–13', lang: 'bonus', title: 'Bonus: Node.js, React, Laravel', blurb: 'In the schedule but not in the chapter list: concepts only, may not be in the exam.' }
 ];
 
 const STEP_NAMES = ['Big Picture', 'Simple Explanation', 'Deeper Understanding', 'Important Points', 'Exam Focus', 'Common Mistakes', 'Mini Summary', 'Active Recall'];

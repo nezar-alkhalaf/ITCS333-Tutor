@@ -19,9 +19,9 @@ Source: the course specification (2026-27), section 26.
 
 **Excluded:** Ch 17 and Ch 18 (the spec says "not part of the exam material").
 
-**Unknown, ask Nezar before building:**
-- Is the final cumulative (does it include HTML/CSS/JS again)?
-- Are Node.js, React and Laravel (weekly schedule, weeks 12–13) examinable? They are in the schedule but not in the chapter list.
+**Decided:** the final **is cumulative** (Nezar, 15 Nov 2026). The `final` track in `js/tracks.js` lists the midterm modules too, and offers the mock midterm next to the mock final.
+
+**Node.js, React and Laravel** (weekly schedule, weeks 12–13, not in the chapter list): Nezar says *maybe*. Add them **after** step 6 as short lessons in their own module, every lesson titled "Bonus: may not be in the exam". Keep them out of the mock final.
 
 **Regex** (`preg_match`) appears in the 2024-25 papers by this course's staff, so treat it as **in scope for PHP**. The JS regex lesson stays marked "Bonus".
 
@@ -89,6 +89,24 @@ Spike this first (step 1). Pick the option that meets all of the following:
 **Candidates:** WordPress Playground's `@php-wasm/web` (needs a bundler, so weigh that), or `php-wasm` by seanmorris (CDN ES module, has a PDO-SQLite build).
 
 **Fallback** if neither works within one session: build the PHP lessons as **"predict the output"** and **"fill the missing line"** exercises with fixed expected outputs, and keep the runner for later.
+
+### Decision (step 1, done): `php-wasm` by seanmorris
+
+- **Runtime:** `php-wasm@0.2.0` + `php-wasm-sqlite@0.2.0` (PHP 8.4), imported as ES modules from jsDelivr with pinned versions. Nothing is downloaded until the first PHP run; `js/php-runner.js` itself is a small plain script. `@php-wasm/web` was rejected because it needs a bundler.
+- **Not verified from the build sandbox:** the sandbox blocks jsDelivr, so the runner was tested against the same npm tarballs served locally. Open `#php-lab` on the live site once to confirm the CDN path.
+- **`js/php-runner.js` (`PHPRUN`):**
+  - `PHPRUN.send(code, req, visitor, {db, files, reseed})` runs one request. `req = {method, query, body, ip, cookies}`; `query` and `body` are url-encoded strings, parsed by PHP's own `parse_str`, so `x[]` arrays work.
+  - `PHPRUN.play(code, requests, {db, files})` sends several requests as one new visitor (used for grading).
+  - A result has `html`, `text`, `errors` (with line numbers), `setCookies`, `cookies`, `session`, `redirect`, `died`, `status`.
+- **What is real and what is simulated:**
+  - Real PHP: `$_GET/$_POST/$_COOKIE/$_SERVER`, `setcookie`, `header`, sessions (PHP's own session files, found again through the `PHPSESSID` cookie), PDO.
+  - `new PDO("mysql:host=...;dbname=X", user, pass)` is routed to a SQLite file seeded from the exercise's `db: {name, user, pass, sql}`. A wrong database name or password throws a `PDOException` like MySQL would. Seed SQL must be SQLite-compatible.
+  - `die()` / `exit` are rewritten to a sandbox function, so cookies and headers can still be reported.
+  - Each request runs from scratch (`php.refresh()`), so nothing leaks between requests except cookies, sessions and the database.
+- **File uploads:** a request can carry `files: {field: {name, type, size, content | data, error}}`; a file chosen in the preview form is sent too (only with `enctype="multipart/form-data"`, like a real browser). `move_uploaded_file` / `is_uploaded_file` are rewritten to sandbox versions; relative `uploads/…` maps to the site's uploads folder (scripts run with `/` as the working folder, because changing folder breaks loading the SQLite driver).
+- **Limits:** an infinite loop freezes the tab, like in the JS labs; SQL is SQLite's dialect.
+- **UI:** `lab()` has a `php` mode: request bar (method, query string, POST body, IP), rendered page, raw HTML, and a log (errors, `Set-Cookie`, `Location`, `die`, the cookie jar, `$_SESSION`). Submitting a form inside the preview sends the next request.
+- **Challenges:** `challenge: { mode: 'php', tabs: ['php'], requests: [...], db?, files?, checks: [{d, t(results, src)}] }`.
 
 **Grading PHP challenges:** run the student's code with 2–3 fake requests. Each check reads the **output DOM** or text (for example "row for Nino is yellow", "total is 3.85", "says No Camera selected when nothing is ticked"). Same `checks[{d, t}]` idea as the JS challenges.
 
@@ -168,16 +186,16 @@ Spike this first (step 1). Pick the option that meets all of the following:
 6. **Module 12, Ch 16 (security).**
    - Lessons: XSS and `htmlspecialchars`; SQL injection, shown with a vulnerable query vs a prepared statement, run in the SQLite sandbox only; session hijacking and the `session.cookie_httponly` / `secure` settings; password hashing (`password_hash` / `password_verify`); HTTPS concepts; input validation on the client vs the server.
    - Keep the demos defensive and inside the sandbox.
-7. **Theory page, Ch 1–2.**
+7. **Theory page, Ch 1–2.** (Done as module 00, two lessons: `web-basics`, `web-http`. The "read an HTTP request" exercise is the `web-http` challenge; the MCQs go into the step 8 bank.)
    - About 25 MCQs plus a "read an HTTP request" exercise: method, path, host, query string, Content-Type, Content-Length.
 8. **Question bank + short answers.**
    - At least 25 MCQs per new module (Arabic too).
    - A new **short-answer** type: the student writes an answer, then compares it with a model answer and a checklist of key points to tick themselves.
-9. **Mock Final.**
+9. **Mock Final.** (Done: `js/exam-final.js`, 43 marks in 90 minutes: Q1 13, Q2 10, Q3 10, Q4 10 self-marked; 4 + 3 + 2 code scenarios.)
    - Same engine as the mock midterm (`exam.js`), with new parts: PHP arrays/regex, PDO prepared statement, session/cookie output, and short answers. Several scenarios each.
    - Marking is line by line with the same point style (1 pt per required line).
    - Run every model answer and confirm full marks.
-10. **Home and navigation** (most of this is done in step 0b).
+10. **Home and navigation** (done: per-track home with countdown, progress, code sample and footer chapters; README updated).
     - Final polish of the home page for each track.
     - Update the footer chapters.
 

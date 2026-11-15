@@ -5,7 +5,7 @@ const U = (() => {
   /* Mini markdown: paragraphs, "- " lists, [[code]], **bold**. Input is plain text. */
   function md(src) {
     const inline = t => esc(t)
-      .replace(/\[\[(.+?)\]\]/g, (_, c) => '<code>' + c + '</code>')
+      .replace(/\[\[(.+?)\]\](?!\])/g, (_, c) => '<code>' + c + '</code>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     return String(src).trim().split(/\n\s*\n/).map(block => {
       const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
@@ -79,7 +79,88 @@ const U = (() => {
     }
     return out + esc(code.slice(i));
   }
-  const hl = (lang, code) => lang === 'css' ? hlCSS(code) : lang === 'js' ? hlJS(code) : hlHTML(code);
+  /* ---------- PHP: scanner (shared by the highlighter and the PHP runner) ---------- */
+  /* Splits a .php source into pieces: html (outside the PHP tags), tag (<?php, <?=, ?>), com, str, code. */
+  function phpScan(src) {
+    src = String(src);
+    const out = [], n = src.length;
+    const push = (t, s) => { if (s) out.push({ t, s }); };
+    const open = /<\?(?:php(?![\w])|=)/gi;
+    const tok = /(\?>)|(\/\/|#(?!\[))|(\/\*[\s\S]*?(?:\*\/|$))|('(?:\\[\s\S]|[^'\\])*'?)|("(?:\\[\s\S]|[^"\\])*"?)|(<<<[ \t]*(['"]?)(\w+)\7\r?\n[\s\S]*?\n[ \t]*\8\b)|([^'"\/#?<]+|[\s\S])/y;
+    let i = 0, inPhp = false;
+    while (i < n) {
+      if (!inPhp) {
+        open.lastIndex = i;
+        const m = open.exec(src);
+        if (!m) { push('html', src.slice(i)); break; }
+        push('html', src.slice(i, m.index)); push('tag', m[0]);
+        i = m.index + m[0].length; inPhp = true;
+        continue;
+      }
+      tok.lastIndex = i;
+      const m = tok.exec(src);
+      if (m[1]) { push('tag', m[1]); inPhp = false; i = tok.lastIndex; }
+      else if (m[2]) {
+        let e = src.indexOf('\n', i); if (e < 0) e = n;
+        const c = src.indexOf('?>', i); if (c > -1 && c < e) e = c;
+        push('com', src.slice(i, e)); i = e;
+      }
+      else if (m[3]) { push('com', m[3]); i = tok.lastIndex; }
+      else if (m[4] || m[5] || m[6]) { push('str', m[0]); i = tok.lastIndex; }
+      else {
+        const last = out[out.length - 1];
+        if (last && last.t === 'code') last.s += m[0]; else push('code', m[0]);
+        i = tok.lastIndex;
+      }
+    }
+    return out;
+  }
+  const PHP_KW = 'abstract|and|array|as|break|case|catch|class|const|continue|default|die|do|echo|else|elseif|empty|endfor|endforeach|endif|endwhile|exit|extends|false|final|finally|fn|for|foreach|function|global|if|include|include_once|isset|list|new|null|or|print|private|protected|public|require|require_once|return|static|switch|throw|true|try|unset|use|var|while';
+  function hlPHP(code) {
+    const re = new RegExp('(\\$\\w+)|\\b(' + PHP_KW + ')\\b|\\b(\\d+(?:\\.\\d+)?)\\b|([A-Za-z_]\\w*)(?=\\s*\\()|([{}()[\\];,.=+\\-*/<>!&|?:])', 'gi');
+    return phpScan(code).map(p => {
+      if (p.t === 'html') return hlHTML(p.s);
+      if (p.t === 'tag') return span('tag', p.s);
+      if (p.t === 'com') return span('com', p.s);
+      if (p.t === 'str') return span('str', p.s);
+      let out = '', last = 0, m; re.lastIndex = 0;
+      while ((m = re.exec(p.s))) {
+        out += esc(p.s.slice(last, m.index));
+        if (m[1]) out += span('var', m[1]);
+        else if (m[2]) out += span('kw', m[2]);
+        else if (m[3]) out += span('num', m[3]);
+        else if (m[4]) out += span('fn', m[4]);
+        else out += span('punc', m[5]);
+        last = re.lastIndex;
+      }
+      return out + esc(p.s.slice(last));
+    }).join('');
+  }
+  function hlSQL(code) {
+    const re = /(--[^\n]*)|('(?:''|[^'])*')|\b(SELECT|FROM|WHERE|AND|OR|NOT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|ORDER|BY|ASC|DESC|LIMIT|CREATE|TABLE|PRIMARY|KEY|NULL|LIKE|IN|BETWEEN|AS|COUNT|SUM|AVG|MIN|MAX|JOIN|ON|GROUP|HAVING|INT|INTEGER|VARCHAR|TEXT|DECIMAL|AUTO_INCREMENT|DROP|DISTINCT|IS)\b|\b(\d+(?:\.\d+)?)\b|(:\w+|\?)|([(),;=*<>])/gi;
+    let out = '', last = 0, m;
+    while ((m = re.exec(code))) {
+      out += esc(code.slice(last, m.index));
+      if (m[1]) out += span('com', m[1]);
+      else if (m[2]) out += span('str', m[2]);
+      else if (m[3]) out += span('kw', m[3]);
+      else if (m[4]) out += span('num', m[4]);
+      else if (m[5]) out += span('var', m[5]);
+      else out += span('punc', m[6]);
+      last = re.lastIndex;
+    }
+    return out + esc(code.slice(last));
+  }
+  /* An HTTP message: first line and header names stand out, the rest is plain. */
+  function hlHTTP(code) {
+    return code.split('\n').map((l, i) => {
+      if (i === 0) return span('kw', l);
+      const m = l.match(/^([\w-]+)(:)(.*)$/);
+      return m ? span('prop', m[1]) + span('punc', m[2]) + span('str', m[3]) : esc(l);
+    }).join('\n');
+  }
+  const HL = { css: hlCSS, js: hlJS, json: hlJS, php: hlPHP, sql: hlSQL, http: hlHTTP, text: esc, html: hlHTML };
+  const hl = (lang, code) => (HL[lang] || hlHTML)(code);
   const codeBlock = (lang, code) => '<pre class="code" data-lang="' + lang + '"><code>' + hl(lang, code.replace(/^\n/, '').replace(/\s+$/, '')) + '</code></pre>';
 
   /* ---------- Storage (safe) ---------- */
@@ -137,13 +218,66 @@ const U = (() => {
   }
 
   /* ---------- Runner: builds a document from html/css/js and loads it in an iframe ---------- */
+  /* Mock web API for the sandbox (it has no internet). fetch('/api/...') answers with fixed JSON after a short delay.
+     Routes: GET /api/students, /api/students/<id>, /api/courses, /api/courses/<code>, /api/weather?city=Manama,
+     POST /api/students (JSON body) -> 201, /api/error -> 500, /api/offline -> network failure, /api/text -> plain text.
+     Add ?delay=<ms> to any route (default 300). Every request is recorded in window.__apiLog for grading. */
+  function mockApi() {
+    var DATA = {
+      students: [{ id: 1, name: 'Ali', major: 'CS', gpa: 3.4 }, { id: 2, name: 'Sara', major: 'CE', gpa: 3.9 }, { id: 3, name: 'Hassan', major: 'IS', gpa: 2.1 }, { id: 4, name: 'Maryam', major: 'CS', gpa: 3.1 }],
+      courses: [{ code: 'ITCS333', title: 'Internet Software Development', credits: 3 }, { code: 'ITCS214', title: 'Data Structures', credits: 3 }, { code: 'ITCS285', title: 'Database Management Systems', credits: 3 }],
+      weather: { Manama: { city: 'Manama', temp: 24, sky: 'Sunny' }, Muharraq: { city: 'Muharraq', temp: 23, sky: 'Cloudy' }, Riffa: { city: 'Riffa', temp: 25, sky: 'Windy' } }
+    };
+    window.__apiLog = [];
+    window.fetch = function (input, init) {
+      init = init || {};
+      var url = String(input && input.url ? input.url : input);
+      var m = url.match(/\/api\/([^?#]*)(?:\?([^#]*))?/);
+      var q = new URLSearchParams(m ? m[2] || '' : '');
+      var delay = q.has('delay') ? +q.get('delay') : 300;
+      var method = String(init.method || 'GET').toUpperCase();
+      var headers = {}; try { new Headers(init.headers || {}).forEach(function (v, k) { headers[k] = v; }); } catch (e) { }
+      window.__apiLog.push({ url: url, method: method, body: init.body === undefined ? null : init.body, headers: headers });
+      return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+          if (!m) return reject(new TypeError('Failed to fetch (the practice sandbox has no internet: use an /api/... address)'));
+          var path = m[1].replace(/\/$/, ''), parts = path.split('/');
+          var send = function (status, body) {
+            var text = typeof body === 'string' ? body : JSON.stringify(body);
+            resolve(new Response(text, { status: status, headers: { 'Content-Type': typeof body === 'string' ? 'text/plain' : 'application/json' } }));
+          };
+          if (path === 'offline') return reject(new TypeError('Failed to fetch'));
+          if (path === 'error') return send(500, { error: 'Server error' });
+          if (path === 'text') return send(200, 'Hello from the server');
+          if (parts[0] === 'students' || parts[0] === 'courses') {
+            var list = DATA[parts[0]];
+            if (method === 'POST' && !parts[1]) {
+              var o; try { o = JSON.parse(init.body); } catch (e) { return send(400, { error: 'The body is not valid JSON' }); }
+              if (!o || typeof o !== 'object') return send(400, { error: 'Send a JSON object' });
+              o.id = list.length + 1; return send(201, o);
+            }
+            if (parts[1]) {
+              var item = list.filter(function (x) { return String(x.id || x.code).toLowerCase() === parts[1].toLowerCase(); })[0];
+              return item ? send(200, item) : send(404, { error: 'Not found' });
+            }
+            return send(200, list);
+          }
+          if (parts[0] === 'weather') { var w = DATA.weather[q.get('city') || 'Manama']; return w ? send(200, w) : send(404, { error: 'Unknown city' }); }
+          send(404, { error: 'Not found' });
+        }, delay);
+      });
+    };
+  }
+
   let runSeq = 0;
   function buildDoc(parts, extraScript) {
     const id = ++runSeq;
     const prelude = '<script>(function(){var R=' + id + ';function S(t,m){try{parent.postMessage({__wdl:R,type:t,msg:m},"*")}catch(e){}}' +
-      '["log","warn","error","info"].forEach(function(k){var o=console[k];console[k]=function(){var a=[].slice.call(arguments).map(function(x){try{return typeof x==="object"&&x!==null?(x.nodeType?"<"+x.nodeName.toLowerCase()+"> element":JSON.stringify(x)):String(x)}catch(e){return String(x)}});S(k==="info"?"log":k,a.join(" "));o.apply(console,arguments)}});' +
+      '["log","warn","error","info"].forEach(function(k){var o=console[k];console[k]=function(){var a=[].slice.call(arguments).map(function(x){try{return typeof x==="object"&&x!==null?(x.nodeType?"<"+x.nodeName.toLowerCase()+"> element":x instanceof Promise?"Promise {…}":x instanceof Response?"Response {status: "+x.status+", ok: "+x.ok+"}":x instanceof Error?x.name+": "+x.message:JSON.stringify(x)):String(x)}catch(e){return String(x)}});S(k==="info"?"log":k,a.join(" "));o.apply(console,arguments)}});' +
       'window.alert=function(m){S("alert","alert: "+m)};window.confirm=function(){return true};window.prompt=function(){return ""};' +
       'window.addEventListener("error",function(e){S("error",e.message+(e.lineno?" (line "+e.lineno+")":""))});' +
+      'window.addEventListener("unhandledrejection",function(e){var r=e.reason;S("error","Uncaught (in promise) "+(r&&r.message?(r.name?r.name+": ":"")+r.message:String(r)))});' +
+      '(' + mockApi.toString() + ')();' +
       'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(a&&!/^#/.test(a.getAttribute("href")||"")){e.preventDefault();S("log","(link to "+a.getAttribute("href")+" — links are disabled in the preview)")}});' +
       'window.__subs=[];window.addEventListener("submit",function(e){window.__subs.push(e.defaultPrevented);if(!e.defaultPrevented){e.preventDefault();S("warn","The form was submitted and the page would reload. Call event.preventDefault() in your submit listener to stop that.")}});' +
       '})();<\/script>';
@@ -218,5 +352,5 @@ const U = (() => {
   /* Code without comments, for static checks */
   const strip = src => String(src || '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-  return { esc, md, hl, codeBlock, store, editor, run, hiddenFrame, findRule, normColor, strip, normSel };
+  return { esc, md, hl, codeBlock, store, editor, run, hiddenFrame, findRule, normColor, strip, normSel, phpScan };
 })();
