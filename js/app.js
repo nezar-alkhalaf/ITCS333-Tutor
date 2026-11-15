@@ -42,9 +42,27 @@
   const themeBtn = $('#themeBtn');
   const applyTheme = t => { if (t) document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme'); };
   applyTheme(U.store.get('theme', null));
+  let turns = 0;
   themeBtn.addEventListener('click', () => {
     const cur = document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    const next = cur === 'dark' ? 'light' : 'dark'; applyTheme(next); U.store.set('theme', next);
+    const next = cur === 'dark' ? 'light' : 'dark';
+    const swap = () => { applyTheme(next); U.store.set('theme', next); };
+    themeBtn.querySelector('svg').style.transform = 'rotate(' + (++turns * 180) + 'deg)';
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return swap();
+    /* the new theme spreads in a circle from the button; browsers without view transitions fade the colours */
+    if (!document.startViewTransition) {
+      const html = document.documentElement;
+      html.classList.add('theme-fade'); swap();
+      setTimeout(() => html.classList.remove('theme-fade'), 400);
+      return;
+    }
+    const r = themeBtn.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    document.startViewTransition(swap).ready.then(() => {
+      document.documentElement.animate(
+        { clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + end + 'px at ' + x + 'px ' + y + 'px)'] },
+        { duration: 550, easing: 'cubic-bezier(.4, 0, .2, 1)', pseudoElement: '::view-transition-new(root)' });
+    }).catch(() => {});
   });
   const t = I18N.t;
   const paintChrome = () => {
